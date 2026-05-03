@@ -23,6 +23,7 @@ interface DayPlan {
 
 interface MealPlanResponse {
   plan: Record<string, DayPlan>;
+  cheatDays?: number[];
   dailyAverage: {
     calories: number;
     protein: number;
@@ -119,12 +120,14 @@ export async function POST(req: NextRequest) {
       weekStart,
       plan: result.plan as unknown as import("@/lib/types").WeekPlan,
       targetCalories,
+      cheatDays: result.cheatDays ?? [],
     }).returning();
 
     return NextResponse.json({
       ...result,
       id: saved[0].id,
       weekStart,
+      cheatDays: result.cheatDays ?? [],
     });
   } catch (e) {
     console.error("Meal plan generation failed:", e);

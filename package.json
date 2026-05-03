@@ -12,6 +12,7 @@
     "db:seed": "tsx lib/db/seed.ts"
   },
   "dependencies": {
+    "@alicloud/dypnsapi20170525": "^2.0.0",
     "@amap/amap-jsapi-loader": "^1.0.1",
     "@base-ui/react": "^1.4.1",
     "better-sqlite3": "^12.9.0",

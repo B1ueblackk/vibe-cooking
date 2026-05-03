@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { sendVerifyCode } from "@/lib/sms";
 
 const PHONE_REGEX = /^1[3-9]\d{9}$/;
 
@@ -9,9 +10,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "请输入正确的手机号" }, { status: 400 });
   }
 
-  // DEV: fixed code 123456, no SMS sent
-  // TODO: integrate real SMS provider (e.g. Aliyun SMS) before production
-  console.log(`[DEV] Verification code for ${phone}: 123456`);
-
-  return NextResponse.json({ success: true });
+  try {
+    const result = await sendVerifyCode(phone);
+    if (!result.success) {
+      return NextResponse.json({ error: result.message || "短信发送失败" }, { status: 500 });
+    }
+    return NextResponse.json({ success: true });
+  } catch (e) {
+    console.error("[SMS] send-code error:", e);
+    return NextResponse.json({ error: "短信服务异常，请稍后重试" }, { status: 500 });
+  }
 }

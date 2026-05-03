@@ -3,8 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { users, tasteProfiles } from "@/lib/db/schema";
 import { signToken, AUTH_COOKIE } from "@/lib/auth";
-
-const DEV_CODE = "123456";
+import { checkVerifyCode } from "@/lib/sms";
 
 export async function POST(request: NextRequest) {
   const { phone, code } = (await request.json()) as { phone?: string; code?: string };
@@ -13,9 +12,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "手机号和验证码不能为空" }, { status: 400 });
   }
 
-  // DEV: accept fixed code
-  if (code !== DEV_CODE) {
-    return NextResponse.json({ error: "验证码错误" }, { status: 400 });
+  // Verify code via Alibaba Cloud (falls back to "123456" when SMS not configured)
+  try {
+    const result = await checkVerifyCode(phone, code);
+    if (!result.pass) {
+      return NextResponse.json({ error: result.message || "验证码错误" }, { status: 400 });
+    }
+  } catch (e) {
+    console.error("[SMS] verify error:", e);
+    return NextResponse.json({ error: "验证服务异常，请稍后重试" }, { status: 500 });
   }
 
   // Find or create user

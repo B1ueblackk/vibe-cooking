@@ -13,6 +13,7 @@ interface GeneratedRecipe {
   carbs: number;
   cookTime: number;
   difficulty: "easy" | "medium" | "hard";
+  tags?: string[];
 }
 
 export async function POST(req: NextRequest) {

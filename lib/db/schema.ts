@@ -105,6 +105,7 @@ export const mealPlans = sqliteTable("meal_plans", {
   weekStart: text("week_start").notNull(),
   plan: text("plan", { mode: "json" }).$type<WeekPlan>().notNull(),
   targetCalories: integer("target_calories").notNull().default(2000),
+  cheatDays: text("cheat_days", { mode: "json" }).$type<number[]>().default([]),
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 
@@ -159,4 +160,16 @@ export const favorites = sqliteTable("favorites", {
   recipeId: text("recipe_id").notNull().references(() => recipes.id),
 }, (t) => [
   primaryKey({ columns: [t.userId, t.recipeId] }),
+]);
+
+// ==================
+// User Preferred Tags
+// ==================
+
+export const userPreferredTags = sqliteTable("user_preferred_tags", {
+  userId: text("user_id").notNull().references(() => users.id),
+  tagName: text("tag_name").notNull(),
+  tagType: text("tag_type").notNull(), // 'cuisine' | 'taste' | 'scene' | 'diet'
+}, (t) => [
+  primaryKey({ columns: [t.userId, t.tagName] }),
 ]);

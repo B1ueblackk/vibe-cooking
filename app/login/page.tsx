@@ -165,13 +165,15 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* Dev hint */}
-        <div className="mt-8 bg-vc-forest/5 rounded-2xl p-4">
-          <p className="text-[0.75rem] text-vc-forest font-medium">开发模式</p>
-          <p className="text-[0.72rem] text-vc-brown-light mt-1">
-            验证码固定为 <span className="font-mono font-semibold text-vc-brown-dark">123456</span>，无需短信
-          </p>
-        </div>
+        {/* Dev hint — only shown when SMS is not configured */}
+        {process.env.NEXT_PUBLIC_SMS_DEV_MODE === "1" && (
+          <div className="mt-8 bg-vc-forest/5 rounded-2xl p-4">
+            <p className="text-[0.75rem] text-vc-forest font-medium">开发模式</p>
+            <p className="text-[0.72rem] text-vc-brown-light mt-1">
+              验证码固定为 <span className="font-mono font-semibold text-vc-brown-dark">123456</span>，无需短信
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

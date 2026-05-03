@@ -27,6 +27,7 @@ interface DayPlan {
 
 export interface WeekPlanData {
   plan: Record<string, DayPlan>;
+  cheatDays?: number[];
   dailyAverage?: {
     calories: number;
     protein: number;
@@ -94,7 +95,7 @@ export default function WeekView({ compact = true, targetCalories = 1800, onNeed
       .then((res) => res.json())
       .then((data) => {
         if (data && data.plan) {
-          setWeekData({ plan: data.plan, dailyAverage: data.dailyAverage });
+          setWeekData({ plan: data.plan, dailyAverage: data.dailyAverage, cheatDays: data.cheatDays ?? [] });
           setIsGenerated(true);
           // Restore cached recipe steps from plan
           const cached: Record<string, StepData> = {};
@@ -173,6 +174,9 @@ export default function WeekView({ compact = true, targetCalories = 1800, onNeed
   };
 
   const selectedDayPlan = weekData.plan[selectedDay];
+  const cheatDaySet = new Set(weekData.cheatDays ?? []);
+  const isCheatDay = (key: string) => cheatDaySet.has(DAY_KEYS.indexOf(key as typeof DAY_KEYS[number]) + 1);
+  const selectedIsCheat = isCheatDay(selectedDay);
   const totalCal = selectedDayPlan
     ? selectedDayPlan.breakfast.calories + selectedDayPlan.lunch.calories + selectedDayPlan.dinner.calories
     : 0;
@@ -208,6 +212,7 @@ export default function WeekView({ compact = true, targetCalories = 1800, onNeed
             const isToday = key === todayKey;
             const isSelected = key === selectedDay;
             const dayCal = getDayCal(weekData.plan, key);
+            const isCheat = isCheatDay(key);
 
             return (
               <button
@@ -216,10 +221,15 @@ export default function WeekView({ compact = true, targetCalories = 1800, onNeed
                 onClick={() => setSelectedDay(key)}
                 className={`shrink-0 ${compact ? "w-[60px]" : "w-[68px]"} rounded-2xl py-2.5 px-2 text-center transition-all relative ${
                   isSelected
-                    ? "bg-gradient-to-b from-[#2D6A4F] to-[#1B4332] text-white shadow-[0_4px_14px_rgba(45,106,79,0.3)] scale-105 z-10"
+                    ? isCheat
+                      ? "bg-gradient-to-b from-[#D4A373] to-[#B07D4F] text-white shadow-[0_4px_14px_rgba(212,163,115,0.3)] scale-105 z-10"
+                      : "bg-gradient-to-b from-[#2D6A4F] to-[#1B4332] text-white shadow-[0_4px_14px_rgba(45,106,79,0.3)] scale-105 z-10"
                     : "bg-white shadow-[var(--shadow-vc-sm)]"
                 }`}
               >
+                {isCheat && (
+                  <span className={`absolute -top-1.5 -right-1 text-[0.6rem] ${isSelected ? "" : ""}`}>🎉</span>
+                )}
                 <div className={`text-[0.6rem] font-semibold uppercase tracking-wider ${isSelected ? "opacity-80" : "opacity-40"}`}>
                   {key.toUpperCase()}
                 </div>
@@ -286,6 +296,15 @@ export default function WeekView({ compact = true, targetCalories = 1800, onNeed
 
           {/* Meal cards */}
           <div className="space-y-3 mt-3">
+            {selectedIsCheat && (
+              <div className="flex items-center gap-2 bg-amber-50 rounded-2xl px-4 py-2.5">
+                <span className="text-lg">🎉</span>
+                <div>
+                  <span className="text-[0.78rem] font-semibold text-amber-700">放纵日</span>
+                  <span className="text-[0.72rem] text-amber-600 ml-1.5">今天可以适当放松，享受美食！</span>
+                </div>
+              </div>
+            )}
             {(["breakfast", "lunch", "dinner"] as const).map((mealType) => {
               const meal = selectedDayPlan[mealType];
               const colors = mealColors[mealType];

@@ -31,11 +31,17 @@ export default function ProfilePage() {
   const restaurantCount = profile?.stats.restaurantCount ?? 0;
   const level = Math.floor((recipeCount + favoriteCount + restaurantCount) / 5) + 1;
 
+  const LEVEL_NAMES = [
+    "厨房新手", "料理学徒", "家常好手", "美食达人",
+    "味觉猎人", "风味大师", "食神", "传奇食神",
+  ];
+  const levelName = LEVEL_NAMES[Math.min(level - 1, LEVEL_NAMES.length - 1)];
+
   const stats = [
     { icon: BookOpen, label: "我的菜谱", value: recipeCount, color: "bg-vc-terracotta/10 text-vc-terracotta" },
     { icon: Heart, label: "收藏", value: favoriteCount, color: "bg-red-50 text-red-400" },
     { icon: MapPin, label: "足迹", value: restaurantCount, color: "bg-vc-forest/10 text-vc-forest" },
-    { icon: Award, label: "等级", value: `Lv.${level}`, color: "bg-vc-amber/15 text-vc-amber-warm" },
+    { icon: Award, label: levelName, value: `Lv.${level}`, color: "bg-vc-amber/15 text-vc-amber-warm" },
   ];
 
   const menuItems = [
@@ -43,7 +49,7 @@ export default function ProfilePage() {
     { label: "AI 生成记录", desc: "查看 AI 生成的食谱历史", icon: "🤖", href: "/profile/ai-history" },
     { label: "收藏菜谱", desc: `${favoriteCount} 个收藏`, icon: "⭐", href: "/profile/favorites" },
     { label: "美食足迹", desc: `${restaurantCount} 家餐厅`, icon: "🗺️", href: "/explore" },
-    { label: "饮食报告", desc: "本周营养摄入分析", icon: "📊", href: "/mealplan" },
+    { label: "饮食报告", desc: "本周营养摄入分析", icon: "📊", href: "/mealplan/report" },
   ];
 
   const nickname = profile?.user.nickname ?? "美食探索家";
@@ -54,8 +60,12 @@ export default function ProfilePage() {
       {/* Profile header */}
       <div className="px-6 mb-6">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-vc-terracotta to-vc-amber-warm flex items-center justify-center text-2xl text-white shadow-[var(--shadow-vc-glow)]">
-            {nickname[0]}
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-vc-terracotta to-vc-amber-warm flex items-center justify-center text-2xl text-white shadow-[var(--shadow-vc-glow)] overflow-hidden">
+            {profile?.user.avatarUrl ? (
+              <img src={profile.user.avatarUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              nickname[0]
+            )}
           </div>
           <div className="flex-1">
             <h1 className="font-serif text-xl text-vc-brown-dark">{nickname}</h1>
@@ -63,7 +73,10 @@ export default function ProfilePage() {
               已加入 {days} 天 · 上海
             </p>
           </div>
-          <button className="w-10 h-10 rounded-xl bg-white shadow-[var(--shadow-vc-sm)] flex items-center justify-center active:scale-95 transition-transform">
+          <button
+            onClick={() => router.push("/profile/settings")}
+            className="w-10 h-10 rounded-xl bg-white shadow-[var(--shadow-vc-sm)] flex items-center justify-center active:scale-95 transition-transform"
+          >
             <Settings size={18} className="text-vc-brown-light" />
           </button>
         </div>
