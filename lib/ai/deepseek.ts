@@ -86,5 +86,18 @@ export async function chatJSON<T>(
   options?: ChatOptions,
 ): Promise<T> {
   const content = await chat(messages, options);
-  return JSON.parse(content) as T;
+  try {
+    return JSON.parse(content) as T;
+  } catch {
+    // Try to extract JSON from markdown code blocks or partial response
+    const match = content.match(/```(?:json)?\s*([\s\S]*?)```/) || content.match(/(\{[\s\S]*\})/);
+    if (match) {
+      try {
+        return JSON.parse(match[1]) as T;
+      } catch {
+        // fall through
+      }
+    }
+    throw new Error(`AI 返回格式错误，无法解析 JSON。响应长度: ${content.length} 字符`);
+  }
 }

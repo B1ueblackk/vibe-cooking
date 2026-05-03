@@ -18,6 +18,13 @@ export async function middleware(request: NextRequest) {
   const token = request.cookies.get(AUTH_COOKIE)?.value;
   const user = token ? await verifyToken(token) : null;
 
+  // Log API requests with timestamp and user
+  if (pathname.startsWith("/api/")) {
+    const ts = new Date().toISOString();
+    const uid = user?.userId ?? "anonymous";
+    console.log(`[${ts}] ${request.method} ${pathname} | user=${uid}`);
+  }
+
   if (!user) {
     // API routes: return 401
     if (pathname.startsWith("/api/")) {
