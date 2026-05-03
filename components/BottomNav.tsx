@@ -28,6 +28,9 @@ export default function BottomNav() {
   const pathname = usePathname();
   const current = matchTab(pathname);
 
+  // Hide on login page
+  if (pathname === "/login") return null;
+
   return (
     <nav className="fixed bottom-0 inset-x-0 z-50 bg-white/88 backdrop-blur-xl border-t border-vc-brown-dark/4">
       <div className="max-w-[430px] mx-auto flex justify-around pt-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))]">

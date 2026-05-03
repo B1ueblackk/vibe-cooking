@@ -78,12 +78,21 @@ export async function checkVerifyCode(
     verifyCode: code,
   });
 
-  const resp = await client.checkSmsVerifyCode(request);
-  const body = resp.body;
+  try {
+    const resp = await client.checkSmsVerifyCode(request);
+    const body = resp.body;
 
-  if (body?.code === "OK" && body.model?.verifyResult === "PASS") {
-    return { pass: true };
+    if (body?.code === "OK" && body.model?.verifyResult === "PASS") {
+      return { pass: true };
+    }
+
+    return { pass: false, message: body?.message || "验证码错误" };
+  } catch (e: unknown) {
+    // Alibaba Cloud throws exceptions for business errors (wrong/expired code)
+    const err = e as { code?: string; message?: string };
+    if (err.code === "isv.ValidateFail") {
+      return { pass: false, message: "验证码错误或已过期" };
+    }
+    throw e; // Re-throw unexpected errors
   }
-
-  return { pass: false, message: body?.message || "验证码错误" };
 }
