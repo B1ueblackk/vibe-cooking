@@ -51,15 +51,24 @@ export async function sendVerifyCode(phone: string): Promise<{ success: boolean;
     codeType: 1,
   });
 
-  const resp = await client.sendSmsVerifyCode(request);
-  const body = resp.body;
+  try {
+    const resp = await client.sendSmsVerifyCode(request);
+    const body = resp.body;
 
-  if (body?.code === "OK" && body.success) {
-    return { success: true };
+    if (body?.code === "OK" && body.success) {
+      return { success: true };
+    }
+
+    const errMsg = body?.code === "biz.FREQUENCY" ? "发送太频繁，请稍后再试" : (body?.message || "短信发送失败");
+    console.error("[SMS] SendSmsVerifyCode failed:", body?.code, body?.message);
+    return { success: false, message: errMsg };
+  } catch (e: unknown) {
+    const err = e as { code?: string; message?: string };
+    if (err.code === "biz.FREQUENCY" || err.message?.includes("FREQUENCY")) {
+      return { success: false, message: "发送太频繁，请稍后再试" };
+    }
+    throw e;
   }
-
-  console.error("[SMS] SendSmsVerifyCode failed:", body?.code, body?.message);
-  return { success: false, message: body?.message || "短信发送失败" };
 }
 
 /** Check the verification code. Returns true if valid. */
