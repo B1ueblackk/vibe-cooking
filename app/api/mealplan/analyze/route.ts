@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
         { role: "system", content: ANALYZE_PROMPT },
         { role: "user", content: `以下是我这周（${plan.weekStart}）的饮食记录：\n\n${lines.join("\n")}` },
       ],
-      { maxTokens: 1024 },
+      { maxTokens: 4096 },
     );
 
     return NextResponse.json(result);

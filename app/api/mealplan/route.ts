@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
         { role: "system", content: MEAL_PLAN_PROMPT },
         { role: "user", content: `请根据以下偏好生成一周食谱：${preferences}` },
       ],
-      { maxTokens: 8192 }
+      { maxTokens: 16384 }
     );
 
     const targetCalories = calories;

@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
         { role: "system", content: RECIPE_STEPS_PROMPT },
         { role: "user", content: userMsg },
       ],
-      { maxTokens: 2048 }
+      { maxTokens: 8192 }
     );
 
     return NextResponse.json(result);

@@ -27,7 +27,7 @@ function getProvider(name?: string): ProviderConfig {
   return {
     baseUrl: process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com",
     apiKey: process.env.DEEPSEEK_API_KEY || "",
-    model: process.env.DEEPSEEK_MODEL || "deepseek-chat",
+    model: process.env.DEEPSEEK_MODEL || "deepseek-v4-flash",
   };
 }
 
@@ -67,7 +67,7 @@ export async function chat(
       model: cfg.model,
       messages,
       temperature: options?.temperature ?? 0.7,
-      max_tokens: options?.maxTokens ?? 2048,
+      max_tokens: options?.maxTokens ?? 8192,
       response_format: { type: "json_object" },
     }),
   });

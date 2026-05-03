@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
         { role: "system", content: BODY_ANALYSIS_PROMPT },
         { role: "user", content: userInfo },
       ],
-      { maxTokens: 1024 }
+      { maxTokens: 4096 }
     );
 
     const data = {
