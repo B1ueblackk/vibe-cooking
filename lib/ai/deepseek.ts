@@ -27,7 +27,7 @@ function getProvider(name?: string): ProviderConfig {
   return {
     baseUrl: process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com",
     apiKey: process.env.DEEPSEEK_API_KEY || "",
-    model: process.env.DEEPSEEK_MODEL || "deepseek-v4-flash",
+    model: process.env.DEEPSEEK_MODEL || "deepseek-chat",
   };
 }
 
@@ -39,7 +39,7 @@ interface ChatMessage {
 }
 
 interface ChatCompletionResponse {
-  choices: { message: { content: string } }[];
+  choices: { message: { content: string; reasoning_content?: string } }[];
 }
 
 export interface ChatOptions {
@@ -78,7 +78,9 @@ export async function chat(
   }
 
   const data: ChatCompletionResponse = await res.json();
-  return data.choices[0].message.content;
+  const msg = data.choices[0].message;
+  // DeepSeek reasoning models put output in reasoning_content, content may be empty
+  return msg.content || msg.reasoning_content || "";
 }
 
 export async function chatJSON<T>(
