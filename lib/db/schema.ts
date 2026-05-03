@@ -117,6 +117,9 @@ export const bodyProfiles = sqliteTable("body_profiles", {
   userId: text("user_id").primaryKey().references(() => users.id),
   height: integer("height").notNull(),             // cm
   weight: integer("weight").notNull(),             // kg
+  age: integer("age"),                              // years
+  gender: text("gender"),                           // 'male' | 'female'
+  activityLevel: text("activity_level"),            // 'sedentary' | 'light' | 'moderate' | 'intense'
   goal: text("goal").notNull().default("maintain"), // 'bulk' | 'cut' | 'maintain'
   cheatMeals: integer("cheat_meals").notNull().default(0),
   targetCalories: integer("target_calories"),

@@ -18,6 +18,14 @@ const GOAL_LABELS: Record<string, string> = {
   bulk: "增肌", cut: "减脂", maintain: "维持体重",
 };
 
+const ACTIVITY_LABELS: Record<string, string> = {
+  sedentary: "久坐", light: "轻度活动", moderate: "中等活动", intense: "高强度训练",
+};
+
+const GENDER_LABELS: Record<string, string> = {
+  male: "男", female: "女",
+};
+
 // GET /api/profile/body
 export async function GET() {
   const userId = await getAuthUser();
@@ -37,19 +45,22 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { height, weight, goal, cheatMeals } = body as {
+  const { height, weight, age, gender, goal, activityLevel, cheatMeals } = body as {
     height: number;
     weight: number;
+    age: number;
+    gender: "male" | "female";
     goal: "bulk" | "cut" | "maintain";
+    activityLevel: "sedentary" | "light" | "moderate" | "intense";
     cheatMeals: number;
   };
 
-  if (!height || !weight || !goal) {
+  if (!height || !weight || !goal || !age || !gender || !activityLevel) {
     return NextResponse.json({ error: "缺少必要参数" }, { status: 400 });
   }
 
   try {
-    const userInfo = `身高 ${height}cm，体重 ${weight}kg，目标：${GOAL_LABELS[goal] ?? goal}，每周 ${cheatMeals} 次放纵餐`;
+    const userInfo = `性别 ${GENDER_LABELS[gender] ?? gender}，年龄 ${age}岁，身高 ${height}cm，体重 ${weight}kg，目标：${GOAL_LABELS[goal] ?? goal}，训练频率：${ACTIVITY_LABELS[activityLevel] ?? activityLevel}，每周 ${cheatMeals ?? 0} 次放纵餐`;
 
     const result = await chatJSON<BodyAnalysisResponse>(
       [
@@ -63,6 +74,9 @@ export async function POST(req: NextRequest) {
       userId,
       height,
       weight,
+      age,
+      gender,
+      activityLevel,
       goal,
       cheatMeals: cheatMeals ?? 0,
       targetCalories: result.targetCalories,

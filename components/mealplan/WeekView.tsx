@@ -256,11 +256,13 @@ export default function WeekView({ compact = true, targetCalories = 1800, onNeed
             {loading ? (
               <Loader2 size={18} className="text-vc-terracotta animate-spin" />
             ) : (
-              <Plus size={18} className="text-vc-terracotta" />
+              <>
+                <Plus size={18} className="text-vc-terracotta" />
+                <span className="text-[0.6rem] font-semibold text-vc-terracotta">
+                  生成
+                </span>
+              </>
             )}
-            <span className="text-[0.6rem] font-semibold text-vc-terracotta">
-              {loading ? "..." : "生成"}
-            </span>
           </button>
         </div>
       </div>

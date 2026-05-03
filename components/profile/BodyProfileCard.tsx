@@ -1,11 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Target, Sparkles, Loader2, Ruler, Weight, Dumbbell, ChevronDown, ChevronUp, Cookie } from "lucide-react";
+import { Target, Sparkles, Loader2, Ruler, Weight, Dumbbell, ChevronDown, ChevronUp, Cookie, User, Calendar, Activity } from "lucide-react";
 
 interface BodyProfile {
   height: number;
   weight: number;
+  age: number;
+  gender: string;
+  activityLevel: string;
   goal: string;
   cheatMeals: number;
   targetCalories: number;
@@ -21,6 +24,18 @@ const GOAL_OPTIONS = [
   { value: "bulk", label: "增肌", icon: "💪" },
 ];
 
+const GENDER_OPTIONS = [
+  { value: "male", label: "男", icon: "👨" },
+  { value: "female", label: "女", icon: "👩" },
+];
+
+const ACTIVITY_OPTIONS = [
+  { value: "sedentary", label: "久坐" },
+  { value: "light", label: "轻度" },
+  { value: "moderate", label: "中等" },
+  { value: "intense", label: "高强度" },
+];
+
 interface Props {
   onProfileChange?: (profile: BodyProfile | null) => void;
 }
@@ -32,6 +47,9 @@ export default function BodyProfileCard({ onProfileChange }: Props) {
 
   const [height, setHeight] = useState("");
   const [weight, setWeight] = useState("");
+  const [age, setAge] = useState("");
+  const [gender, setGender] = useState<string>("male");
+  const [activityLevel, setActivityLevel] = useState<string>("moderate");
   const [goal, setGoal] = useState<string>("maintain");
   const [cheatMeals, setCheatMeals] = useState(1);
   const [analyzing, setAnalyzing] = useState(false);
@@ -45,6 +63,9 @@ export default function BodyProfileCard({ onProfileChange }: Props) {
           setBodyProfile(data);
           setHeight(String(data.height));
           setWeight(String(data.weight));
+          setAge(data.age ? String(data.age) : "");
+          setGender(data.gender || "male");
+          setActivityLevel(data.activityLevel || "moderate");
           setGoal(data.goal);
           setCheatMeals(data.cheatMeals ?? 0);
           onProfileChange?.(data);
@@ -62,7 +83,7 @@ export default function BodyProfileCard({ onProfileChange }: Props) {
       const res = await fetch("/api/profile/body", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ height: Number(height), weight: Number(weight), goal, cheatMeals }),
+        body: JSON.stringify({ height: Number(height), weight: Number(weight), age: Number(age), gender, activityLevel, goal, cheatMeals }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -114,14 +135,14 @@ export default function BodyProfileCard({ onProfileChange }: Props) {
       {/* AI summary */}
       {bodyProfile && !showSettings && (
         <div className="mt-3 pt-3 border-t border-vc-cream-deep/60">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
             {goalLabel && (
               <span className="text-[0.7rem] bg-vc-forest/8 text-vc-forest px-2 py-0.5 rounded-lg font-medium">
                 {goalLabel.icon} {goalLabel.label}
               </span>
             )}
             <span className="text-[0.7rem] text-vc-brown-light">
-              {bodyProfile.height}cm · {bodyProfile.weight}kg
+              {bodyProfile.gender === "female" ? "女" : "男"} · {bodyProfile.age}岁 · {bodyProfile.height}cm · {bodyProfile.weight}kg
             </span>
           </div>
           <div className="flex items-start gap-2">
@@ -143,7 +164,7 @@ export default function BodyProfileCard({ onProfileChange }: Props) {
             {bodyProfile ? "更新身体数据，AI 重新计算建议" : "填写身体数据，AI 为你计算每日建议"}
           </p>
 
-          <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="grid grid-cols-3 gap-3 mb-4">
             <div>
               <label className="flex items-center gap-1.5 text-[0.75rem] text-vc-brown-medium mb-1.5">
                 <Ruler size={13} />身高 (cm)
@@ -167,6 +188,60 @@ export default function BodyProfileCard({ onProfileChange }: Props) {
                 placeholder="65"
                 className="w-full px-3 py-2.5 rounded-xl bg-vc-cream text-[0.88rem] text-vc-brown-dark border border-vc-cream-deep focus:outline-none focus:border-vc-terracotta/40 transition-colors"
               />
+            </div>
+            <div>
+              <label className="flex items-center gap-1.5 text-[0.75rem] text-vc-brown-medium mb-1.5">
+                <Calendar size={13} />年龄
+              </label>
+              <input
+                type="number"
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+                placeholder="25"
+                className="w-full px-3 py-2.5 rounded-xl bg-vc-cream text-[0.88rem] text-vc-brown-dark border border-vc-cream-deep focus:outline-none focus:border-vc-terracotta/40 transition-colors"
+              />
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <label className="flex items-center gap-1.5 text-[0.75rem] text-vc-brown-medium mb-1.5">
+              <User size={13} />性别
+            </label>
+            <div className="flex gap-2">
+              {GENDER_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setGender(opt.value)}
+                  className={`flex-1 py-2.5 rounded-xl text-[0.82rem] font-medium transition-all ${
+                    gender === opt.value
+                      ? "bg-gradient-to-b from-[#2D6A4F] to-[#1B4332] text-white shadow-[0_2px_8px_rgba(45,106,79,0.25)]"
+                      : "bg-vc-cream-deep text-vc-brown-medium"
+                  }`}
+                >
+                  {opt.icon} {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <label className="flex items-center gap-1.5 text-[0.75rem] text-vc-brown-medium mb-1.5">
+              <Activity size={13} />训练频率
+            </label>
+            <div className="flex gap-2">
+              {ACTIVITY_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setActivityLevel(opt.value)}
+                  className={`flex-1 py-2.5 rounded-xl text-[0.78rem] font-medium transition-all ${
+                    activityLevel === opt.value
+                      ? "bg-gradient-to-b from-[#2D6A4F] to-[#1B4332] text-white shadow-[0_2px_8px_rgba(45,106,79,0.25)]"
+                      : "bg-vc-cream-deep text-vc-brown-medium"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -214,7 +289,7 @@ export default function BodyProfileCard({ onProfileChange }: Props) {
 
           <button
             onClick={handleAnalyze}
-            disabled={analyzing || !height || !weight}
+            disabled={analyzing || !height || !weight || !age}
             className="w-full py-3 rounded-2xl bg-gradient-to-r from-vc-terracotta to-[#C7613A] text-white font-semibold text-[0.88rem] flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-60"
           >
             {analyzing ? (

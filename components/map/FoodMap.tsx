@@ -50,7 +50,7 @@ export default function FoodMap() {
   }, []);
 
   useEffect(() => {
-    if (!mapRef.current || restaurants.length === 0) return;
+    if (!mapRef.current) return;
 
     let mapInstance: unknown = null;
 
@@ -208,7 +208,21 @@ export default function FoodMap() {
           .load({ key: process.env.NEXT_PUBLIC_AMAP_KEY || "", version: "2.0" })
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           .then((AMap: any) => initMap(AMap))
-          .catch((e: Error) => console.error("AMap load failed:", e));
+          .catch(() => {
+            // Loader may reject if script is already being loaded by another component
+            // Poll for window.AMap to become available
+            let tries = 0;
+            const poll = setInterval(() => {
+              tries++;
+              if (window.AMap) {
+                clearInterval(poll);
+                initMap(window.AMap);
+              } else if (tries > 50) {
+                clearInterval(poll);
+                console.error("AMap failed to load after polling");
+              }
+            }, 200);
+          });
       });
     }
 
