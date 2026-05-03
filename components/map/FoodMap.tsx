@@ -77,6 +77,17 @@ export default function FoodMap() {
 
       mapInstance = map;
 
+      // Center on user location if no restaurants
+      if (restaurants.length === 0 && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            map.setCenter(new AMap.LngLat(pos.coords.longitude, pos.coords.latitude));
+          },
+          () => {},
+          { timeout: 5000, enableHighAccuracy: false }
+        );
+      }
+
       // Track drag vs click
       let isDragging = false;
       map.on("dragstart", () => { isDragging = true; });

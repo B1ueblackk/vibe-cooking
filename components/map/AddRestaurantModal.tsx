@@ -372,7 +372,7 @@ export default function AddRestaurantModal({ restaurant, coordinates, onSave, on
         </div>
 
         {/* Save button */}
-        <div className="px-6 py-4 border-t border-vc-cream-deep">
+        <div className="px-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-vc-cream-deep">
           <button
             onClick={handleSave}
             disabled={!name.trim()}

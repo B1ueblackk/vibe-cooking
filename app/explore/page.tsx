@@ -237,6 +237,19 @@ function ExploreContent() {
         viewMode: "2D",
       });
 
+      // Try to center on user's current location
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            if (!destroyed) {
+              map.setCenter(new AMap.LngLat(pos.coords.longitude, pos.coords.latitude));
+            }
+          },
+          () => {}, // silently fall back to default
+          { timeout: 5000, enableHighAccuracy: false }
+        );
+      }
+
       amapRef.current = { map, markers: [], AMap };
 
       map.on("click", (e: { lnglat: { getLng: () => number; getLat: () => number } }) => {
