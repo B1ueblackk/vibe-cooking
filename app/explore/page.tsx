@@ -212,9 +212,9 @@ function ExploreContent() {
     []
   );
 
-  // Init map (only once when view switches to map)
+  // Init map once on mount (map DOM is always present, hidden via CSS)
   useEffect(() => {
-    if (!mapRef.current || view !== "map") return;
+    if (!mapRef.current) return;
 
     let destroyed = false;
 
@@ -248,7 +248,7 @@ function ExploreContent() {
       setMapReady(true);
     };
 
-    // If AMap is already loaded globally (from a previous init), reuse it
+    // If AMap is already loaded globally, reuse it
     if (window.AMap) {
       initMap(window.AMap);
     } else {
@@ -267,17 +267,9 @@ function ExploreContent() {
 
     return () => {
       destroyed = true;
-      if (amapRef.current) {
-        const m = amapRef.current.map;
-        if (m && typeof (m as { destroy: () => void }).destroy === "function") {
-          (m as { destroy: () => void }).destroy();
-        }
-        amapRef.current = null;
-      }
-      setMapReady(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view]);
+  }, []);
 
   // Re-render markers synchronously (no async re-load) when data/selection changes
   useEffect(() => {
@@ -419,8 +411,8 @@ function ExploreContent() {
       </div>
 
       {/* Content */}
-      {view === "map" ? (
-        <div className="flex-1 relative">
+      {/* Map view — always mounted, hidden via CSS to preserve DOM */}
+      <div className={`flex-1 relative ${view === "map" ? "" : "hidden"}`}>
           <div ref={mapRef} className="w-full h-full" />
           {!mapReady && (
             <div className="absolute inset-0 bg-vc-cream-deep flex items-center justify-center">
@@ -451,8 +443,9 @@ function ExploreContent() {
             </div>
           </div>
         </div>
-      ) : (
-        /* List view */
+
+      {/* List view */}
+      {view === "list" && (
         <div className="flex-1 overflow-y-auto px-5 pt-3 pb-24 space-y-3">
           {filtered.length === 0 ? (
             <div className="text-center py-16 text-vc-brown-light">

@@ -16,18 +16,18 @@ interface ProviderConfig {
 }
 
 function getProvider(name?: string): ProviderConfig {
-  if (name === "qwen") {
+  if (name === "deepseek") {
     return {
-      baseUrl: process.env.QWEN_BASE_URL || "https://api.gpt.ge",
-      apiKey: process.env.QWEN_API_KEY || "",
-      model: process.env.QWEN_MODEL || "qwen3.5-plus",
+      baseUrl: process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com",
+      apiKey: process.env.DEEPSEEK_API_KEY || "",
+      model: process.env.DEEPSEEK_MODEL || "DeepSeek-V4-Flash",
     };
   }
-  // default: deepseek
+  // default: qwen
   return {
-    baseUrl: process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com",
-    apiKey: process.env.DEEPSEEK_API_KEY || "",
-    model: process.env.DEEPSEEK_MODEL || "DeepSeek-V4-Flash",
+    baseUrl: process.env.QWEN_BASE_URL || "https://api.gpt.ge",
+    apiKey: process.env.QWEN_API_KEY || "",
+    model: process.env.QWEN_MODEL || "qwen3.5-plus",
   };
 }
 

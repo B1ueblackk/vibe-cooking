@@ -33,6 +33,8 @@ export default function HomePage() {
   const [replacing, setReplacing] = useState(false);
   const [replaceSuccess, setReplaceSuccess] = useState<string | null>(null);
   const [level, setLevel] = useState(1);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [nickname, setNickname] = useState("");
 
   useEffect(() => {
     fetch("/api/profile")
@@ -41,6 +43,10 @@ export default function HomePage() {
         if (data?.stats) {
           const { recipeCount = 0, favoriteCount = 0, restaurantCount = 0 } = data.stats;
           setLevel(Math.floor((recipeCount + favoriteCount + restaurantCount) / 5) + 1);
+        }
+        if (data?.user) {
+          setAvatarUrl(data.user.avatarUrl || null);
+          setNickname(data.user.nickname || "");
         }
       })
       .catch(() => {});
@@ -157,8 +163,15 @@ export default function HomePage() {
               Your culinary journey
             </p>
           </div>
-          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-vc-terracotta to-vc-amber-warm flex items-center justify-center text-lg text-white shadow-[var(--shadow-vc-md)] cursor-pointer active:scale-95 transition-transform">
-            Z
+          <div
+            onClick={() => router.push("/profile")}
+            className="w-11 h-11 rounded-full bg-gradient-to-br from-vc-terracotta to-vc-amber-warm flex items-center justify-center text-lg text-white shadow-[var(--shadow-vc-md)] cursor-pointer active:scale-95 transition-transform overflow-hidden"
+          >
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              nickname[0] || "?"
+            )}
           </div>
         </div>
         <p className="font-serif text-[1.65rem] text-vc-brown-dark leading-tight">今天想吃点什么？</p>
