@@ -1,0 +1,114 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================
+   Vibe Cooking Design System
+   ============================ */
+
+@theme inline {
+  /* --- Fonts --- */
+  --font-sans: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, -apple-system, sans-serif;
+  --font-serif: "Noto Serif SC", "Songti SC", "SimSun", Georgia, serif;
+  --font-mono: "SF Mono", "Fira Code", "Cascadia Code", ui-monospace, monospace;
+  --font-heading: var(--font-serif);
+
+  /* --- Vibe Cooking Colors --- */
+  --color-vc-terracotta: #D4654A;
+  --color-vc-terracotta-light: #E8856E;
+  --color-vc-terracotta-dark: #C25740;
+  --color-vc-forest: #2D6A4F;
+  --color-vc-forest-light: #40916C;
+  --color-vc-sage: #95D5B2;
+  --color-vc-sage-muted: #B7E4C7;
+  --color-vc-cream: #FDF6EE;
+  --color-vc-cream-deep: #F5EBE0;
+  --color-vc-amber: #E9C46A;
+  --color-vc-amber-warm: #F4A261;
+  --color-vc-brown-dark: #2C1810;
+  --color-vc-brown-medium: #5C3D2E;
+  --color-vc-brown-light: #8B6F5E;
+  --color-vc-white: #FFFFFF;
+
+  /* --- Shadows --- */
+  --shadow-vc-sm: 0 2px 8px rgba(44, 24, 16, 0.06);
+  --shadow-vc-md: 0 4px 20px rgba(44, 24, 16, 0.08);
+  --shadow-vc-lg: 0 8px 32px rgba(44, 24, 16, 0.12);
+  --shadow-vc-glow: 0 4px 24px rgba(212, 101, 74, 0.2);
+
+  /* --- Radius --- */
+  --radius: 0.75rem;
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.6);
+  --radius-2xl: calc(var(--radius) * 2);
+  --radius-3xl: calc(var(--radius) * 2.6);
+  --radius-4xl: calc(var(--radius) * 3.2);
+
+  /* --- shadcn/ui overrides (warm palette) --- */
+  --color-background: var(--color-vc-cream);
+  --color-foreground: var(--color-vc-brown-dark);
+  --color-primary: var(--color-vc-terracotta);
+  --color-primary-foreground: var(--color-vc-white);
+  --color-secondary: var(--color-vc-cream-deep);
+  --color-secondary-foreground: var(--color-vc-brown-dark);
+  --color-muted: var(--color-vc-cream-deep);
+  --color-muted-foreground: var(--color-vc-brown-light);
+  --color-accent: var(--color-vc-forest);
+  --color-accent-foreground: var(--color-vc-white);
+  --color-card: var(--color-vc-white);
+  --color-card-foreground: var(--color-vc-brown-dark);
+  --color-popover: var(--color-vc-white);
+  --color-popover-foreground: var(--color-vc-brown-dark);
+  --color-border: rgba(44, 24, 16, 0.08);
+  --color-input: rgba(44, 24, 16, 0.08);
+  --color-ring: var(--color-vc-terracotta);
+  --color-destructive: #E63946;
+
+  /* --- Chart colors --- */
+  --color-chart-1: var(--color-vc-terracotta);
+  --color-chart-2: var(--color-vc-forest);
+  --color-chart-3: var(--color-vc-amber);
+  --color-chart-4: #4A90D9;
+  --color-chart-5: var(--color-vc-sage);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  html {
+    @apply font-sans;
+  }
+
+  /* Scrollbar hide for horizontal scrollers */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Move AMap logo/watermark above bottom nav */
+  .amap-logo,
+  .amap-copyright {
+    bottom: 76px !important;
+  }
+
+  /* Hide AMap watermark in small card maps */
+  .amap-no-watermark .amap-logo,
+  .amap-no-watermark .amap-copyright {
+    display: none !important;
+  }
+}
