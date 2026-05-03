@@ -35,6 +35,7 @@ export default function BodyProfileCard({ onProfileChange }: Props) {
   const [goal, setGoal] = useState<string>("maintain");
   const [cheatMeals, setCheatMeals] = useState(1);
   const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/profile/body")
@@ -56,6 +57,7 @@ export default function BodyProfileCard({ onProfileChange }: Props) {
 
   const handleAnalyze = async () => {
     setAnalyzing(true);
+    setAnalyzeError(null);
     try {
       const res = await fetch("/api/profile/body", {
         method: "POST",
@@ -69,6 +71,7 @@ export default function BodyProfileCard({ onProfileChange }: Props) {
       onProfileChange?.(data);
     } catch (e) {
       console.error("Body analysis failed:", e);
+      setAnalyzeError(e instanceof Error ? e.message : "分析失败，请稍后重试");
     } finally {
       setAnalyzing(false);
     }
@@ -226,6 +229,9 @@ export default function BodyProfileCard({ onProfileChange }: Props) {
               </>
             )}
           </button>
+          {analyzeError && (
+            <p className="text-red-500 text-[0.75rem] text-center mt-2">{analyzeError}</p>
+          )}
         </div>
       )}
     </div>

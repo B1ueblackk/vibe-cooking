@@ -58,156 +58,159 @@ export default function FoodMap() {
       securityJsCode: process.env.NEXT_PUBLIC_AMAP_SECURITY_KEY || "",
     };
 
-    import("@amap/amap-jsapi-loader").then((AMapLoader) => {
-      AMapLoader.default
-        .load({
-          key: process.env.NEXT_PUBLIC_AMAP_KEY || "",
-          version: "2.0",
-        })
-        .then((AMap: typeof window.AMap) => {
-          if (!mapRef.current) return;
+    const initMap = (AMap: typeof window.AMap) => {
+      if (!mapRef.current) return;
 
-          const center = restaurants.length > 0
-            ? [restaurants[0].longitude, restaurants[0].latitude]
-            : [121.4650, 31.2280];
+      const center = restaurants.length > 0
+        ? [restaurants[0].longitude, restaurants[0].latitude]
+        : [121.4650, 31.2280];
 
-          const map = new AMap.Map(mapRef.current, {
-            zoom: 13,
-            center,
-            mapStyle: "amap://styles/whitesmoke",
-            viewMode: "2D",
-            dragEnable: true,
-            zoomEnable: true,
-            touchZoom: true,
+      const map = new AMap.Map(mapRef.current, {
+        zoom: 13,
+        center,
+        mapStyle: "amap://styles/whitesmoke",
+        viewMode: "2D",
+        dragEnable: true,
+        zoomEnable: true,
+        touchZoom: true,
+      });
+
+      mapInstance = map;
+
+      // Track drag vs click
+      let isDragging = false;
+      map.on("dragstart", () => { isDragging = true; });
+      map.on("dragend", () => { setTimeout(() => { isDragging = false; }, 50); });
+
+      // Click on map (not drag) → close bubble & deselect
+      map.on("click", () => {
+        if (isDragging) return;
+        closeBubble();
+        setSelected(null);
+      });
+
+      function showBubble(r: Restaurant) {
+        if (bubbleRef.current) {
+          bubbleRef.current.remove();
+          bubbleRef.current = null;
+        }
+
+        const cuisine = getCuisineName(r);
+        const ratingStars = r.rating ? "★".repeat(r.rating) + "☆".repeat(5 - r.rating) : "";
+
+        const bubble = document.createElement("div");
+        bubble.style.cssText = `
+          position: absolute; z-index: 200; pointer-events: none;
+          opacity: 0; transform: translate(-50%, -100%) scale(0.8);
+          transition: opacity 0.25s cubic-bezier(0.34,1.56,0.64,1), transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
+        `;
+        bubble.innerHTML = `
+          <div style="
+            background: white;
+            border-radius: 14px;
+            padding: 10px 14px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.08);
+            font-family: system-ui, -apple-system, sans-serif;
+            min-width: 130px;
+            max-width: 200px;
+            position: relative;
+          ">
+            <div style="font-weight:600;font-size:13px;color:#2C1810;margin-bottom:3px;">${r.name}</div>
+            <div style="font-size:11px;color:#8B6F5E;">
+              ${cuisine}${r.costAvg ? ` · ¥${r.costAvg}/人` : ""}
+            </div>
+            ${ratingStars ? `<div style="color:#D4A574;font-size:10px;margin-top:2px;letter-spacing:1px;">${ratingStars}</div>` : ""}
+            ${r.signatureDishes?.length ? `<div style="font-size:10px;color:#6B7B5E;margin-top:3px;">${r.signatureDishes.slice(0, 2).join(" · ")}</div>` : ""}
+            <div style="
+              position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%);
+              width: 12px; height: 12px; background: white;
+              border-radius: 2px; transform: translateX(-50%) rotate(45deg);
+              box-shadow: 2px 2px 4px rgba(0,0,0,0.06);
+            "></div>
+          </div>
+        `;
+
+        const pixel = (map as unknown as { lngLatToContainer: (lnglat: unknown) => { x: number; y: number } })
+          .lngLatToContainer(new AMap.LngLat(r.longitude, r.latitude));
+        bubble.style.left = `${pixel.x}px`;
+        bubble.style.top = `${pixel.y - 26}px`;
+
+        mapRef.current!.appendChild(bubble);
+        bubbleRef.current = bubble;
+
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            bubble.style.opacity = "1";
+            bubble.style.transform = "translate(-50%, -100%) scale(1)";
           });
-
-          mapInstance = map;
-
-          // Track drag vs click
-          let isDragging = false;
-          map.on("dragstart", () => { isDragging = true; });
-          map.on("dragend", () => { setTimeout(() => { isDragging = false; }, 50); });
-
-          // Click on map (not drag) → close bubble & deselect
-          map.on("click", () => {
-            if (isDragging) return;
-            closeBubble();
-            setSelected(null);
-          });
-
-          function showBubble(r: Restaurant) {
-            if (bubbleRef.current) {
-              bubbleRef.current.remove();
-              bubbleRef.current = null;
-            }
-
-            const cuisine = getCuisineName(r);
-            const ratingStars = r.rating ? "★".repeat(r.rating) + "☆".repeat(5 - r.rating) : "";
-
-            const bubble = document.createElement("div");
-            bubble.style.cssText = `
-              position: absolute; z-index: 200; pointer-events: none;
-              opacity: 0; transform: translate(-50%, -100%) scale(0.8);
-              transition: opacity 0.25s cubic-bezier(0.34,1.56,0.64,1), transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
-            `;
-            bubble.innerHTML = `
-              <div style="
-                background: white;
-                border-radius: 14px;
-                padding: 10px 14px;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.08);
-                font-family: system-ui, -apple-system, sans-serif;
-                min-width: 130px;
-                max-width: 200px;
-                position: relative;
-              ">
-                <div style="font-weight:600;font-size:13px;color:#2C1810;margin-bottom:3px;">${r.name}</div>
-                <div style="font-size:11px;color:#8B6F5E;">
-                  ${cuisine}${r.costAvg ? ` · ¥${r.costAvg}/人` : ""}
-                </div>
-                ${ratingStars ? `<div style="color:#D4A574;font-size:10px;margin-top:2px;letter-spacing:1px;">${ratingStars}</div>` : ""}
-                ${r.signatureDishes?.length ? `<div style="font-size:10px;color:#6B7B5E;margin-top:3px;">${r.signatureDishes.slice(0, 2).join(" · ")}</div>` : ""}
-                <div style="
-                  position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%);
-                  width: 12px; height: 12px; background: white;
-                  border-radius: 2px; transform: translateX(-50%) rotate(45deg);
-                  box-shadow: 2px 2px 4px rgba(0,0,0,0.06);
-                "></div>
-              </div>
-            `;
-
-            const pixel = (map as unknown as { lngLatToContainer: (lnglat: unknown) => { x: number; y: number } })
-              .lngLatToContainer(new AMap.LngLat(r.longitude, r.latitude));
-            bubble.style.left = `${pixel.x}px`;
-            bubble.style.top = `${pixel.y - 26}px`;
-
-            mapRef.current!.appendChild(bubble);
-            bubbleRef.current = bubble;
-
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => {
-                bubble.style.opacity = "1";
-                bubble.style.transform = "translate(-50%, -100%) scale(1)";
-              });
-            });
-
-            const updatePos = () => {
-              const p = (map as unknown as { lngLatToContainer: (lnglat: unknown) => { x: number; y: number } })
-                .lngLatToContainer(new AMap.LngLat(r.longitude, r.latitude));
-              bubble.style.left = `${p.x}px`;
-              bubble.style.top = `${p.y - 26}px`;
-            };
-            map.on("mapmove", updatePos);
-            map.on("zoomchange", updatePos);
-          }
-
-          restaurants.forEach((r) => {
-            const emoji = getCuisineEmoji(r);
-
-            const el = document.createElement("div");
-            el.className = "amap-food-pin";
-            el.innerHTML = `<div style="
-              width: 36px; height: 36px;
-              background: white;
-              border-radius: 50%;
-              box-shadow: 0 2px 12px rgba(0,0,0,0.15);
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-size: 18px;
-              cursor: pointer;
-              transition: transform 0.2s, box-shadow 0.2s;
-            ">${emoji}</div>`;
-
-            const marker = new AMap.Marker({
-              position: new AMap.LngLat(r.longitude, r.latitude),
-              content: el,
-              offset: new AMap.Pixel(-18, -18),
-              draggable: false,
-            });
-
-            marker.on("click", (e: { originEvent?: { stopPropagation: () => void; preventDefault: () => void } }) => {
-              e.originEvent?.stopPropagation();
-              e.originEvent?.preventDefault();
-
-              showBubble(r);
-              setSelected(r);
-              map.panTo(new AMap.LngLat(r.longitude, r.latitude));
-            });
-
-            map.add(marker);
-          });
-
-          if (restaurants.length > 1) {
-            map.setFitView(undefined, false, [50, 50, 50, 50]);
-          }
-
-          setMapLoaded(true);
-        })
-        .catch((e: Error) => {
-          console.error("AMap load failed:", e);
         });
-    });
+
+        const updatePos = () => {
+          const p = (map as unknown as { lngLatToContainer: (lnglat: unknown) => { x: number; y: number } })
+            .lngLatToContainer(new AMap.LngLat(r.longitude, r.latitude));
+          bubble.style.left = `${p.x}px`;
+          bubble.style.top = `${p.y - 26}px`;
+        };
+        map.on("mapmove", updatePos);
+        map.on("zoomchange", updatePos);
+      }
+
+      restaurants.forEach((r) => {
+        const emoji = getCuisineEmoji(r);
+
+        const el = document.createElement("div");
+        el.className = "amap-food-pin";
+        el.innerHTML = `<div style="
+          width: 36px; height: 36px;
+          background: white;
+          border-radius: 50%;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 18px;
+          cursor: pointer;
+          transition: transform 0.2s, box-shadow 0.2s;
+        ">${emoji}</div>`;
+
+        const marker = new AMap.Marker({
+          position: new AMap.LngLat(r.longitude, r.latitude),
+          content: el,
+          offset: new AMap.Pixel(-18, -18),
+          draggable: false,
+        });
+
+        marker.on("click", (e: { originEvent?: { stopPropagation: () => void; preventDefault: () => void } }) => {
+          e.originEvent?.stopPropagation();
+          e.originEvent?.preventDefault();
+
+          showBubble(r);
+          setSelected(r);
+          map.panTo(new AMap.LngLat(r.longitude, r.latitude));
+        });
+
+        map.add(marker);
+      });
+
+      if (restaurants.length > 1) {
+        map.setFitView(undefined, false, [50, 50, 50, 50]);
+      }
+
+      setMapLoaded(true);
+    };
+
+    // Reuse AMap if already loaded globally, otherwise load it
+    if (window.AMap) {
+      initMap(window.AMap);
+    } else {
+      import("@amap/amap-jsapi-loader").then((AMapLoader) => {
+        AMapLoader.default
+          .load({ key: process.env.NEXT_PUBLIC_AMAP_KEY || "", version: "2.0" })
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .then((AMap: any) => initMap(AMap))
+          .catch((e: Error) => console.error("AMap load failed:", e));
+      });
+    }
 
     return () => {
       if (bubbleRef.current) {

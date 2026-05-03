@@ -89,6 +89,7 @@ export default function WeekView({ compact = true, targetCalories = 1800, onNeed
   const [expandedRecipe, setExpandedRecipe] = useState<Record<string, boolean>>({});
   const [recipeSteps, setRecipeSteps] = useState<Record<string, StepData>>({});
   const [loadingRecipe, setLoadingRecipe] = useState<Record<string, boolean>>({});
+  const [genError, setGenError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/mealplan")
@@ -120,6 +121,7 @@ export default function WeekView({ compact = true, targetCalories = 1800, onNeed
       return;
     }
     setLoading(true);
+    setGenError(null);
     try {
       const res = await fetch("/api/mealplan", {
         method: "POST",
@@ -132,6 +134,7 @@ export default function WeekView({ compact = true, targetCalories = 1800, onNeed
       setIsGenerated(true);
     } catch (e) {
       console.error("Meal plan generation failed:", e);
+      setGenError(e instanceof Error ? e.message : "生成失败，请稍后重试");
     } finally {
       setLoading(false);
     }
@@ -261,6 +264,13 @@ export default function WeekView({ compact = true, targetCalories = 1800, onNeed
           </button>
         </div>
       </div>
+
+      {/* Generation error */}
+      {genError && (
+        <div className="mx-5 mt-2 bg-red-50 rounded-2xl px-4 py-3 text-[0.8rem] text-red-600">
+          {genError}
+        </div>
+      )}
 
       {/* Day detail section (full page mode) */}
       {selectedDayPlan && !compact && (

@@ -84,9 +84,12 @@ export default function DietReportPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const [analyzeErrors, setAnalyzeErrors] = useState<Record<string, string>>({});
+
   const handleAnalyze = async (planId: string) => {
     if (analyses[planId] || analyzing[planId]) return;
     setAnalyzing((prev) => ({ ...prev, [planId]: true }));
+    setAnalyzeErrors((prev) => ({ ...prev, [planId]: "" }));
     try {
       const res = await fetch("/api/mealplan/analyze", {
         method: "POST",
@@ -96,9 +99,11 @@ export default function DietReportPage() {
       const data = await res.json();
       if (res.ok) {
         setAnalyses((prev) => ({ ...prev, [planId]: data }));
+      } else {
+        setAnalyzeErrors((prev) => ({ ...prev, [planId]: data.error || "分析失败，请稍后重试" }));
       }
     } catch {
-      // ignore
+      setAnalyzeErrors((prev) => ({ ...prev, [planId]: "网络错误，请检查连接后重试" }));
     } finally {
       setAnalyzing((prev) => ({ ...prev, [planId]: false }));
     }
@@ -135,6 +140,7 @@ export default function DietReportPage() {
             const isExpanded = expandedWeek === plan.id;
             const analysis = analyses[plan.id];
             const isAnalyzing = analyzing[plan.id];
+            const analyzeError = analyzeErrors[plan.id];
 
             return (
               <div key={plan.id} className="bg-white rounded-3xl shadow-[var(--shadow-vc-sm)] overflow-hidden">
@@ -273,23 +279,28 @@ export default function DietReportPage() {
                         </div>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => handleAnalyze(plan.id)}
-                        disabled={isAnalyzing}
-                        className="w-full py-3 rounded-2xl bg-gradient-to-r from-vc-forest to-vc-forest/80 text-white text-[0.85rem] font-medium flex items-center justify-center gap-2 active:opacity-90 disabled:opacity-60 transition-all"
-                      >
-                        {isAnalyzing ? (
-                          <>
-                            <Loader2 size={16} className="animate-spin" />
-                            AI 分析中...
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles size={16} />
-                            AI 分析本周饮食
-                          </>
+                      <div>
+                        <button
+                          onClick={() => handleAnalyze(plan.id)}
+                          disabled={isAnalyzing}
+                          className="w-full py-3 rounded-2xl bg-gradient-to-r from-vc-forest to-vc-forest/80 text-white text-[0.85rem] font-medium flex items-center justify-center gap-2 active:opacity-90 disabled:opacity-60 transition-all"
+                        >
+                          {isAnalyzing ? (
+                            <>
+                              <Loader2 size={16} className="animate-spin" />
+                              AI 分析中...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles size={16} />
+                              {analyzeError ? "重新分析" : "AI 分析本周饮食"}
+                            </>
+                          )}
+                        </button>
+                        {analyzeError && (
+                          <p className="text-red-500 text-[0.75rem] text-center mt-2">{analyzeError}</p>
                         )}
-                      </button>
+                      </div>
                     )}
                   </div>
                 )}
