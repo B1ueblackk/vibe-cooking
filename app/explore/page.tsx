@@ -227,30 +227,43 @@ function ExploreContent() {
       if (r) setEditRestaurant(r);
     };
 
-    import("@amap/amap-jsapi-loader").then((AMapLoader) => {
-      AMapLoader.default
-        .load({ key: process.env.NEXT_PUBLIC_AMAP_KEY || "", version: "2.0" })
-        .then((AMap: typeof window.AMap) => {
-          if (destroyed || !mapRef.current) return;
+    const initMap = (AMap: typeof window.AMap) => {
+      if (destroyed || !mapRef.current) return;
 
-          const map = new AMap.Map(mapRef.current, {
-            zoom: DEFAULT_MAP_ZOOM,
-            center: [DEFAULT_MAP_CENTER.lng, DEFAULT_MAP_CENTER.lat],
-            mapStyle: "amap://styles/whitesmoke",
-            viewMode: "2D",
+      const map = new AMap.Map(mapRef.current, {
+        zoom: DEFAULT_MAP_ZOOM,
+        center: [DEFAULT_MAP_CENTER.lng, DEFAULT_MAP_CENTER.lat],
+        mapStyle: "amap://styles/whitesmoke",
+        viewMode: "2D",
+      });
+
+      amapRef.current = { map, markers: [], AMap };
+
+      map.on("click", (e: { lnglat: { getLng: () => number; getLat: () => number } }) => {
+        setAddCoords({ lng: e.lnglat.getLng(), lat: e.lnglat.getLat() });
+        setAddModalOpen(true);
+      });
+
+      renderMarkers(AMap, map, filtered, selectedId);
+      setMapReady(true);
+    };
+
+    // If AMap is already loaded globally (from a previous init), reuse it
+    if (window.AMap) {
+      initMap(window.AMap);
+    } else {
+      import("@amap/amap-jsapi-loader").then((AMapLoader) => {
+        AMapLoader.default
+          .load({ key: process.env.NEXT_PUBLIC_AMAP_KEY || "", version: "2.0" })
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .then((AMap: any) => {
+            initMap(AMap);
+          })
+          .catch((err: unknown) => {
+            console.error("AMap load error:", err);
           });
-
-          amapRef.current = { map, markers: [], AMap };
-
-          map.on("click", (e: { lnglat: { getLng: () => number; getLat: () => number } }) => {
-            setAddCoords({ lng: e.lnglat.getLng(), lat: e.lnglat.getLat() });
-            setAddModalOpen(true);
-          });
-
-          renderMarkers(AMap, map, filtered, selectedId);
-          setMapReady(true);
-        });
-    });
+      });
+    }
 
     return () => {
       destroyed = true;

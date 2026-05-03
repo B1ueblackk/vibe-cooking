@@ -58,11 +58,9 @@ export default function BottomNav() {
               >
                 {label}
               </span>
-              <span
-                className={`w-1 h-1 rounded-full bg-vc-terracotta transition-opacity ${
-                  isActive ? "opacity-100" : "opacity-0"
-                }`}
-              />
+              {isActive && (
+                <span className="w-1 h-1 rounded-full bg-vc-terracotta" />
+              )}
             </Link>
           );
         })}

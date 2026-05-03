@@ -30,8 +30,8 @@ export default function BodyProfileCard({ onProfileChange }: Props) {
   const [showSettings, setShowSettings] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
 
-  const [height, setHeight] = useState(170);
-  const [weight, setWeight] = useState(65);
+  const [height, setHeight] = useState("");
+  const [weight, setWeight] = useState("");
   const [goal, setGoal] = useState<string>("maintain");
   const [cheatMeals, setCheatMeals] = useState(1);
   const [analyzing, setAnalyzing] = useState(false);
@@ -42,8 +42,8 @@ export default function BodyProfileCard({ onProfileChange }: Props) {
       .then((data) => {
         if (data && data.targetCalories) {
           setBodyProfile(data);
-          setHeight(data.height);
-          setWeight(data.weight);
+          setHeight(String(data.height));
+          setWeight(String(data.weight));
           setGoal(data.goal);
           setCheatMeals(data.cheatMeals ?? 0);
           onProfileChange?.(data);
@@ -60,7 +60,7 @@ export default function BodyProfileCard({ onProfileChange }: Props) {
       const res = await fetch("/api/profile/body", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ height, weight, goal, cheatMeals }),
+        body: JSON.stringify({ height: Number(height), weight: Number(weight), goal, cheatMeals }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -148,7 +148,8 @@ export default function BodyProfileCard({ onProfileChange }: Props) {
               <input
                 type="number"
                 value={height}
-                onChange={(e) => setHeight(Number(e.target.value))}
+                onChange={(e) => setHeight(e.target.value)}
+                placeholder="170"
                 className="w-full px-3 py-2.5 rounded-xl bg-vc-cream text-[0.88rem] text-vc-brown-dark border border-vc-cream-deep focus:outline-none focus:border-vc-terracotta/40 transition-colors"
               />
             </div>
@@ -159,7 +160,8 @@ export default function BodyProfileCard({ onProfileChange }: Props) {
               <input
                 type="number"
                 value={weight}
-                onChange={(e) => setWeight(Number(e.target.value))}
+                onChange={(e) => setWeight(e.target.value)}
+                placeholder="65"
                 className="w-full px-3 py-2.5 rounded-xl bg-vc-cream text-[0.88rem] text-vc-brown-dark border border-vc-cream-deep focus:outline-none focus:border-vc-terracotta/40 transition-colors"
               />
             </div>

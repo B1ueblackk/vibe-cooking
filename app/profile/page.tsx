@@ -53,7 +53,7 @@ export default function ProfilePage() {
   ];
 
   const nickname = profile?.user.nickname ?? "美食探索家";
-  const days = profile ? daysSince(profile.user.createdAt) : 0;
+  const days = profile ? Math.max(daysSince(profile.user.createdAt), 1) : 1;
 
   return (
     <div className="pt-14">
@@ -70,7 +70,7 @@ export default function ProfilePage() {
           <div className="flex-1">
             <h1 className="font-serif text-xl text-vc-brown-dark">{nickname}</h1>
             <p className="text-[0.82rem] text-vc-brown-light mt-0.5">
-              已加入 {days} 天 · 上海
+              已加入 {days} 天
             </p>
           </div>
           <button

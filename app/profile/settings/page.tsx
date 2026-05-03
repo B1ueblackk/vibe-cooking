@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Camera, Loader2, Check } from "lucide-react";
+import AvatarCropper from "@/components/profile/AvatarCropper";
 
 interface TagCatalog {
   cuisine: string[];
@@ -43,6 +44,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -64,14 +66,22 @@ export default function SettingsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setCropSrc(reader.result as string);
+    reader.readAsDataURL(file);
+    // Reset input so re-selecting the same file works
+    e.target.value = "";
+  };
 
+  const handleCropConfirm = async (blob: Blob) => {
+    setCropSrc(null);
     setUploading(true);
     try {
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", blob, "avatar.jpg");
       const res = await fetch("/api/upload", { method: "POST", body: formData });
       const data = await res.json();
       if (res.ok && data.url) {
@@ -129,6 +139,15 @@ export default function SettingsPage() {
 
   return (
     <div className="pt-14 pb-24">
+      {/* Avatar cropper overlay */}
+      {cropSrc && (
+        <AvatarCropper
+          imageSrc={cropSrc}
+          onCancel={() => setCropSrc(null)}
+          onConfirm={handleCropConfirm}
+        />
+      )}
+
       {/* Header */}
       <div className="px-5 mb-6 flex items-center gap-3">
         <button
@@ -168,7 +187,7 @@ export default function SettingsPage() {
           type="file"
           accept="image/*"
           className="hidden"
-          onChange={handleAvatarUpload}
+          onChange={handleAvatarSelect}
         />
       </div>
 
