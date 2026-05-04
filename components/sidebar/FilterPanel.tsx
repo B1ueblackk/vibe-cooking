@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp, X, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, ChevronUp, X, SlidersHorizontal, Users } from "lucide-react";
 import { CUISINE_COLORS, CUISINE_HIERARCHY } from "@/lib/constants";
 import type { RestaurantStatus, RestaurantFilterPayload } from "@/lib/types";
+import FriendSidebar from "@/components/map/FriendSidebar";
 
 const TOP_CUISINES = ["中餐", "日料", "韩餐", "意餐", "法餐", "东南亚", "西餐", "火锅", "烧烤", "甜品", "咖啡", "小吃"];
 const TASTE_OPTIONS = ["辣", "清淡", "甜", "咸鲜", "酸", "麻", "鲜香"];
@@ -15,6 +16,7 @@ const DEFAULT_FILTERS: RestaurantFilterPayload = {
   maxCost: null,
   minCost: null,
   minRating: null,
+  friendIds: [],
 };
 
 interface Props {
@@ -26,6 +28,7 @@ interface Props {
 
 export default function FilterPanel({ filters, onChange, resultCount, onClose }: Props) {
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
+  const [friendSidebarOpen, setFriendSidebarOpen] = useState(false);
 
   const toggleExpand = (id: string) => {
     setExpandedParents((prev) => {
@@ -54,6 +57,7 @@ export default function FilterPanel({ filters, onChange, resultCount, onClose }:
     filters.cuisines.length +
     filters.tastes.length +
     filters.status.length +
+    filters.friendIds.length +
     (filters.maxCost ? 1 : 0) +
     (filters.minRating ? 1 : 0);
 
@@ -89,6 +93,35 @@ export default function FilterPanel({ filters, onChange, resultCount, onClose }:
 
         {/* Filters */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
+          {/* Friends filter — button opens sidebar */}
+          <div>
+            <p className="text-[0.78rem] font-semibold text-vc-brown-medium mb-2">
+              好友餐厅 {filters.friendIds.length > 0 && <span className="text-vc-terracotta">({filters.friendIds.length})</span>}
+            </p>
+            <button
+              onClick={() => setFriendSidebarOpen(true)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[0.82rem] font-medium transition-all ${
+                filters.friendIds.length > 0
+                  ? "bg-vc-forest text-white"
+                  : "bg-vc-cream-deep text-vc-brown-medium active:bg-vc-cream-deep/70"
+              }`}
+            >
+              <Users size={15} />
+              {filters.friendIds.length > 0 ? `已选 ${filters.friendIds.length} 位好友` : "选择好友"}
+            </button>
+          </div>
+
+          {/* Friend sidebar */}
+          <FriendSidebar
+            open={friendSidebarOpen}
+            onClose={() => setFriendSidebarOpen(false)}
+            selectedIds={filters.friendIds}
+            onToggle={(id) => {
+              const arr = filters.friendIds;
+              onChange({ ...filters, friendIds: arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id] });
+            }}
+          />
+
           {/* Status */}
           <div>
             <p className="text-[0.78rem] font-semibold text-vc-brown-medium mb-2">状态</p>

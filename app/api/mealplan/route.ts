@@ -48,94 +48,126 @@ export async function GET() {
     return NextResponse.json(null);
   }
 
-  return NextResponse.json(rows[0]);
+  const row = rows[0];
+  return NextResponse.json({
+    ...row,
+    status: row.status ?? "done",
+  });
 }
 
-// POST /api/mealplan — generate a new plan via AI and save to DB
+// POST /api/mealplan — create a pending record, generate in background
 export async function POST(req: NextRequest) {
   const userId = await getAuthUser();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  try {
-    const body = await req.json();
-    const { targetCalories: reqCalories } = body as { targetCalories?: number };
+  const body = await req.json();
+  const { targetCalories: reqCalories } = body as { targetCalories?: number };
 
-    // Read user's body profile and taste profile for richer context
-    const [bodyRow] = await db
-      .select()
-      .from(bodyProfiles)
-      .where(eq(bodyProfiles.userId, userId));
+  // Read user's body profile and taste profile for richer context
+  const [bodyRow] = await db
+    .select()
+    .from(bodyProfiles)
+    .where(eq(bodyProfiles.userId, userId));
 
-    const [tasteRow] = await db
-      .select()
-      .from(tasteProfiles)
-      .where(eq(tasteProfiles.userId, userId));
+  const [tasteRow] = await db
+    .select()
+    .from(tasteProfiles)
+    .where(eq(tasteProfiles.userId, userId));
 
-    const calories = reqCalories ?? bodyRow?.targetCalories ?? 1800;
+  const calories = reqCalories ?? bodyRow?.targetCalories ?? 1800;
 
-    const parts: string[] = [`目标每日热量：${calories} kcal`];
+  const parts: string[] = [`目标每日热量：${calories} kcal`];
 
-    if (bodyRow) {
-      parts.push(`身体数据：身高 ${bodyRow.height}cm，体重 ${bodyRow.weight}kg`);
-      parts.push(`健身目标：${bodyRow.goal === "cut" ? "减脂" : bodyRow.goal === "bulk" ? "增肌" : "维持体重"}`);
-      if (bodyRow.targetProtein) parts.push(`建议蛋白质：${bodyRow.targetProtein}g/天`);
-      if (bodyRow.targetFat) parts.push(`建议脂肪：${bodyRow.targetFat}g/天`);
-      if (bodyRow.targetCarbs) parts.push(`建议碳水：${bodyRow.targetCarbs}g/天`);
-      if (bodyRow.cheatMeals > 0) parts.push(`每周 ${bodyRow.cheatMeals} 次放纵餐，可适当放宽热量`);
+  if (bodyRow) {
+    parts.push(`身体数据：身高 ${bodyRow.height}cm，体重 ${bodyRow.weight}kg`);
+    parts.push(`健身目标：${bodyRow.goal === "cut" ? "减脂" : bodyRow.goal === "bulk" ? "增肌" : "维持体重"}`);
+    if (bodyRow.targetProtein) parts.push(`建议蛋白质：${bodyRow.targetProtein}g/天`);
+    if (bodyRow.targetFat) parts.push(`建议脂肪：${bodyRow.targetFat}g/天`);
+    if (bodyRow.targetCarbs) parts.push(`建议碳水：${bodyRow.targetCarbs}g/天`);
+    if (bodyRow.cheatMeals > 0) parts.push(`每周 ${bodyRow.cheatMeals} 次放纵餐，可适当放宽热量`);
+  }
+
+  if (tasteRow) {
+    const spicy = tasteRow.spicy ?? 50;
+    const spicyLabel = spicy > 80 ? "喜辣，可多安排辣味菜" : spicy > 60 ? "能吃辣，偶尔安排辣味菜" : spicy > 30 ? "口味适中，少量辣味即可" : "不吃辣，避免辣味菜";
+    parts.push(`辣度：${spicyLabel}`);
+    const cuisines = tasteRow.preferredCuisines;
+    if (cuisines && cuisines.length > 0) {
+      parts.push(`偏好菜系：${cuisines.join("、")}`);
     }
+  }
 
-    if (tasteRow) {
-      const spicy = tasteRow.spicy ?? 50;
-      const spicyLabel = spicy > 80 ? "喜辣，可多安排辣味菜" : spicy > 60 ? "能吃辣，偶尔安排辣味菜" : spicy > 30 ? "口味适中，少量辣味即可" : "不吃辣，避免辣味菜";
-      parts.push(`辣度：${spicyLabel}`);
-      const cuisines = tasteRow.preferredCuisines;
-      if (cuisines && cuisines.length > 0) {
-        parts.push(`偏好菜系：${cuisines.join("、")}`);
-      }
-    }
+  const preferences = parts.join("；");
 
-    const preferences = parts.join("；");
+  // Calculate week start (Monday of current week)
+  const now = new Date();
+  const day = now.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + diff);
+  const weekStart = monday.toISOString().split("T")[0];
 
-    const result = await chatJSON<MealPlanResponse>(
-      [
-        { role: "system", content: MEAL_PLAN_PROMPT },
-        { role: "user", content: `请根据以下偏好生成一周食谱：${preferences}` },
-      ],
-      { maxTokens: 16384 }
-    );
+  // Upsert: reuse existing record for this week, or create new
+  const existing = await db
+    .select()
+    .from(mealPlans)
+    .where(eq(mealPlans.userId, userId))
+    .orderBy(desc(mealPlans.createdAt));
 
-    const targetCalories = calories;
+  const sameWeek = existing.find((r) => r.weekStart === weekStart);
 
-    // Calculate week start (Monday of current week)
-    const now = new Date();
-    const day = now.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    const monday = new Date(now);
-    monday.setDate(now.getDate() + diff);
-    const weekStart = monday.toISOString().split("T")[0];
-
-    // Save to database
-    const saved = await db.insert(mealPlans).values({
+  let planId: string;
+  if (sameWeek) {
+    // Update existing record for this week
+    await db.update(mealPlans).set({
+      targetCalories: calories,
+      cheatDays: [],
+      status: "generating",
+      plan: {} as import("@/lib/types").WeekPlan,
+    }).where(eq(mealPlans.id, sameWeek.id));
+    planId = sameWeek.id;
+  } else {
+    const [saved] = await db.insert(mealPlans).values({
       userId,
       weekStart,
-      plan: result.plan as unknown as import("@/lib/types").WeekPlan,
-      targetCalories,
-      cheatDays: result.cheatDays ?? [],
+      plan: {} as import("@/lib/types").WeekPlan,
+      targetCalories: calories,
+      cheatDays: [],
+      status: "generating",
     }).returning();
-
-    return NextResponse.json({
-      ...result,
-      id: saved[0].id,
-      weekStart,
-      cheatDays: result.cheatDays ?? [],
-    });
-  } catch (e) {
-    console.error("Meal plan generation failed:", e);
-    return NextResponse.json(
-      { error: "食谱生成失败，请稍后重试" },
-      { status: 500 }
-    );
+    planId = saved.id;
   }
+
+  // Fire-and-forget: generate in background
+  chatJSON<MealPlanResponse>(
+    [
+      { role: "system", content: MEAL_PLAN_PROMPT },
+      { role: "user", content: `请根据以下偏好生成一周食谱：${preferences}` },
+    ],
+    { maxTokens: 32768 }
+  )
+    .then(async (result) => {
+      await db.update(mealPlans).set({
+        plan: result.plan as unknown as import("@/lib/types").WeekPlan,
+        cheatDays: result.cheatDays ?? [],
+        status: "done",
+      }).where(eq(mealPlans.id, planId));
+      console.log(`Meal plan ${planId} generated successfully`);
+    })
+    .catch(async (err) => {
+      console.error(`Meal plan ${planId} generation failed:`, err);
+      await db.update(mealPlans).set({
+        status: "failed",
+      }).where(eq(mealPlans.id, planId));
+    });
+
+  // Return immediately
+  return NextResponse.json({
+    id: planId,
+    status: "generating",
+    weekStart,
+    targetCalories: calories,
+  });
 }
 
 // PATCH /api/mealplan — replace a single meal slot in the latest plan

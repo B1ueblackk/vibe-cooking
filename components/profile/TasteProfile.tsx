@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import type { TasteProfile as TasteProfileType } from "@/lib/types";
 
 const LEVEL_NAMES = [
@@ -32,12 +33,31 @@ interface Props {
 
 export default function TasteProfile({ level }: Props) {
   const [taste, setTaste] = useState<TasteProfileType | null>(null);
+  const [recalculating, setRecalculating] = useState(false);
 
   useEffect(() => {
     fetch("/api/profile/taste")
       .then((res) => res.json())
-      .then((data: TasteProfileType | null) => {
-        if (data) setTaste(data);
+      .then((data) => {
+        if (data) {
+          if (data.spicy !== undefined) setTaste(data as TasteProfileType);
+          // Auto-recalculate if dirty, with 1-hour cooldown on failure
+          if (data.isDirty) {
+            const lastFail = localStorage.getItem("taste_recalc_fail");
+            if (lastFail && Date.now() - Number(lastFail) < 3600000) return;
+            setRecalculating(true);
+            fetch("/api/profile/taste/recalculate", { method: "POST" })
+              .then((r) => r.json())
+              .then((result) => {
+                if (result.spicy !== undefined) {
+                  setTaste(result as TasteProfileType);
+                  localStorage.removeItem("taste_recalc_fail");
+                }
+              })
+              .catch(() => { localStorage.setItem("taste_recalc_fail", String(Date.now())); })
+              .finally(() => setRecalculating(false));
+          }
+        }
       })
       .catch(() => {});
   }, []);
@@ -54,6 +74,13 @@ export default function TasteProfile({ level }: Props) {
           <span className="text-[0.85rem] font-medium text-vc-brown-dark">
             {getLevelName(level)}
           </span>
+        </div>
+      )}
+
+      {recalculating && (
+        <div className="flex items-center gap-2 mb-3 px-1">
+          <Loader2 size={14} className="animate-spin text-vc-terracotta" />
+          <span className="text-[0.75rem] text-vc-terracotta">AI 正在分析你的口味偏好...</span>
         </div>
       )}
 

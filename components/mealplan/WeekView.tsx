@@ -1,7 +1,8 @@
 "use client";
 
 import { Plus, Loader2, Sparkles, Flame, Beef, Wheat, Droplets, BookOpen, ChevronUp, Clock } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import GenerateSettingsModal from "./GenerateSettingsModal";
 
 interface MealItem {
   title: string;
@@ -76,10 +77,9 @@ const mealColors = {
 interface Props {
   compact?: boolean;
   targetCalories?: number;
-  onNeedBodyProfile?: () => void;
 }
 
-export default function WeekView({ compact = true, targetCalories = 1800, onNeedBodyProfile }: Props) {
+export default function WeekView({ compact = true, targetCalories = 1800 }: Props) {
   const [weekData, setWeekData] = useState<WeekPlanData>(defaultPlan);
   const [loading, setLoading] = useState(false);
   const [isGenerated, setIsGenerated] = useState(false);
@@ -90,52 +90,90 @@ export default function WeekView({ compact = true, targetCalories = 1800, onNeed
   const [recipeSteps, setRecipeSteps] = useState<Record<string, StepData>>({});
   const [loadingRecipe, setLoadingRecipe] = useState<Record<string, boolean>>({});
   const [genError, setGenError] = useState<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [showGenModal, setShowGenModal] = useState(false);
+
+  const applyPlanData = useCallback((data: { plan: Record<string, DayPlan>; dailyAverage?: WeekPlanData["dailyAverage"]; cheatDays?: number[] }) => {
+    setWeekData({ plan: data.plan, dailyAverage: data.dailyAverage, cheatDays: data.cheatDays ?? [] });
+    setIsGenerated(true);
+    // Restore cached recipe steps from plan
+    const cached: Record<string, StepData> = {};
+    for (const day of DAY_KEYS) {
+      const dayPlan = data.plan[day];
+      if (!dayPlan) continue;
+      for (const mt of ["breakfast", "lunch", "dinner"] as const) {
+        if (dayPlan[mt]?.recipeSteps) {
+          cached[`${day}-${mt}`] = dayPlan[mt].recipeSteps;
+        }
+      }
+    }
+    if (Object.keys(cached).length > 0) setRecipeSteps(cached);
+  }, []);
+
+  const startPolling = useCallback(() => {
+    if (pollRef.current) return;
+    setLoading(true);
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await fetch("/api/mealplan");
+        const data = await res.json();
+        if (!data) return;
+        if (data.status === "done" && data.plan && Object.keys(data.plan).length > 0) {
+          clearInterval(pollRef.current!);
+          pollRef.current = null;
+          applyPlanData(data);
+          setLoading(false);
+        } else if (data.status === "failed") {
+          clearInterval(pollRef.current!);
+          pollRef.current = null;
+          setGenError("食谱生成失败，请稍后重试");
+          setLoading(false);
+        }
+      } catch {
+        // keep polling
+      }
+    }, 3000);
+  }, [applyPlanData]);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     fetch("/api/mealplan")
       .then((res) => res.json())
       .then((data) => {
-        if (data && data.plan) {
-          setWeekData({ plan: data.plan, dailyAverage: data.dailyAverage, cheatDays: data.cheatDays ?? [] });
-          setIsGenerated(true);
-          // Restore cached recipe steps from plan
-          const cached: Record<string, StepData> = {};
-          for (const day of DAY_KEYS) {
-            const dayPlan = data.plan[day];
-            if (!dayPlan) continue;
-            for (const mt of ["breakfast", "lunch", "dinner"] as const) {
-              if (dayPlan[mt]?.recipeSteps) {
-                cached[`${day}-${mt}`] = dayPlan[mt].recipeSteps;
-              }
-            }
-          }
-          if (Object.keys(cached).length > 0) setRecipeSteps(cached);
+        if (data && data.status === "generating") {
+          startPolling();
+        } else if (data && data.plan && Object.keys(data.plan).length > 0) {
+          applyPlanData(data);
         }
       })
       .catch(() => {});
-  }, []);
+  }, [applyPlanData, startPolling]);
 
-  const handleGenerate = async () => {
-    if (onNeedBodyProfile) {
-      onNeedBodyProfile();
-      return;
-    }
+  const handleGenerate = () => {
+    setShowGenModal(true);
+  };
+
+  const handleConfirmGenerate = async (cal: number) => {
     setLoading(true);
     setGenError(null);
     try {
       const res = await fetch("/api/mealplan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ targetCalories }),
+        body: JSON.stringify({ targetCalories: cal }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      setWeekData(data);
-      setIsGenerated(true);
+      startPolling();
     } catch (e) {
       console.error("Meal plan generation failed:", e);
       setGenError(e instanceof Error ? e.message : "生成失败，请稍后重试");
-    } finally {
       setLoading(false);
     }
   };
@@ -465,6 +503,12 @@ export default function WeekView({ compact = true, targetCalories = 1800, onNeed
           </div>
         </div>
       )}
+
+      <GenerateSettingsModal
+        open={showGenModal}
+        onClose={() => setShowGenModal(false)}
+        onConfirm={handleConfirmGenerate}
+      />
     </div>
   );
 }

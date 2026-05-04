@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, Loader2, Send } from "lucide-react";
+import { Loader2, Send } from "lucide-react";
 import { useState } from "react";
 
 const quickTags = ["快手早餐", "减脂餐", "增肌食谱", "家常菜"];
@@ -38,10 +38,10 @@ export default function HeroInput({ onGenerate, loading }: Props) {
       <div className="absolute -bottom-12 -left-5 w-24 h-24 rounded-full bg-white/5" />
 
       <h2 className="font-serif text-[1.35rem] text-white mb-1.5 relative z-10">
-        拍一拍你的冰箱
+        冰箱里有什么？
       </h2>
       <p className="text-sm text-white/78 mb-5 leading-relaxed relative z-10">
-        输入食材或拍照，AI 秒出菜谱和营养方案
+        输入食材，AI 秒出菜谱和营养方案
       </p>
 
       <div className="flex gap-2.5 relative z-10">
@@ -64,9 +64,6 @@ export default function HeroInput({ onGenerate, loading }: Props) {
           ) : (
             <Send size={20} />
           )}
-        </button>
-        <button className="w-[50px] h-[50px] rounded-[18px] bg-white/20 text-white flex items-center justify-center backdrop-blur-sm active:scale-92 transition-transform border border-white/25">
-          <Camera size={22} />
         </button>
       </div>
 

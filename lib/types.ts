@@ -102,6 +102,7 @@ export interface RestaurantFilterPayload {
   maxCost: number | null;
   minCost: number | null;
   minRating: number | null;
+  friendIds: string[];
 }
 
 export interface MealPlan {
@@ -184,4 +185,63 @@ export interface FilterPayload {
   maxCookTime?: number;
   difficulty?: string;
   query?: string;         // AI natural language search
+}
+
+// ==================
+// Friend Types
+// ==================
+
+export type FriendshipStatus = "pending" | "accepted" | "rejected";
+
+export interface FriendInfo {
+  id: string;          // user id
+  nickname: string;
+  avatarUrl?: string;
+  friendshipId: string;
+  starred?: boolean;
+  restaurantCount?: number;
+  visitedCount?: number;
+  wantCount?: number;
+}
+
+// ==================
+// Comment Types
+// ==================
+
+export interface Comment {
+  id: string;
+  userId: string;
+  targetType: "post" | "recipe";
+  targetId: string;
+  content: string;
+  createdAt: string;
+  author?: User;
+}
+
+// ==================
+// Recommendation Types
+// ==================
+
+export interface Recommendation {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  recipeId: string;
+  message?: string;
+  readAt?: string;
+  createdAt: string;
+  sender?: User;
+  recipe?: Recipe;
+}
+
+// ==================
+// Shopping List Types
+// ==================
+
+export interface ShoppingItem {
+  name: string;
+  amount: number;
+  unit: string;
+  category: string;
+  sources: string[];
 }

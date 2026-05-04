@@ -63,7 +63,7 @@ function applyFilters(restaurants: Restaurant[], filters: RestaurantFilterPayloa
 // DB row → Restaurant type adapter
 // ==================
 
-function toRestaurant(row: Record<string, unknown>): Restaurant {
+function toRestaurant(row: Record<string, unknown>): Restaurant & { ownerNickname?: string; isOwn?: boolean } {
   return {
     id: row.id as string,
     userId: row.userId as string,
@@ -78,6 +78,8 @@ function toRestaurant(row: Record<string, unknown>): Restaurant {
     notes: (row.notes ?? undefined) as string | undefined,
     status: row.status as RestaurantStatus,
     createdAt: row.createdAt as string,
+    ownerNickname: row.ownerNickname as string | undefined,
+    isOwn: row.isOwn as boolean | undefined,
   };
 }
 
@@ -126,9 +128,12 @@ function ExploreContent() {
   // Fetch restaurants from API
   // ==================
 
-  const fetchRestaurants = useCallback(async () => {
+  const fetchRestaurants = useCallback(async (friendIds: string[] = []) => {
     try {
-      const res = await fetch("/api/restaurants");
+      const url = friendIds.length > 0
+        ? `/api/restaurants?friends=${friendIds.join(",")}`
+        : "/api/restaurants";
+      const res = await fetch(url);
       const rows = await res.json();
       setRestaurants(rows.map(toRestaurant));
     } catch (e) {
@@ -137,8 +142,8 @@ function ExploreContent() {
   }, []);
 
   useEffect(() => {
-    fetchRestaurants();
-  }, [fetchRestaurants]);
+    fetchRestaurants(filters.friendIds);
+  }, [fetchRestaurants, filters.friendIds]);
 
   // ==================
   // Map initialization & marker rendering
@@ -237,12 +242,34 @@ function ExploreContent() {
         viewMode: "2D",
       });
 
-      // Try to center on user's current location
+      // Try to center on user's current location + show blue dot
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
-            if (!destroyed) {
-              map.setCenter(new AMap.LngLat(pos.coords.longitude, pos.coords.latitude));
+            if (destroyed) return;
+            const { longitude, latitude } = pos.coords;
+            map.setCenter(new AMap.LngLat(longitude, latitude));
+
+            // Blue pulsing dot for current location
+            const el = document.createElement("div");
+            el.innerHTML = `<div style="position:relative;width:18px;height:18px;">
+              <div style="position:absolute;inset:0;background:rgba(66,133,244,0.2);border-radius:50%;animation:vcPulse 2s ease-out infinite;"></div>
+              <div style="position:absolute;inset:3px;background:#4285F4;border:2.5px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(66,133,244,0.4);"></div>
+            </div>`;
+            const locMarker = new AMap.Marker({
+              position: new AMap.LngLat(longitude, latitude),
+              content: el,
+              offset: new AMap.Pixel(-9, -9),
+              zIndex: 200,
+            });
+            map.add(locMarker);
+
+            // Inject pulse animation if not already present
+            if (!document.getElementById("vc-pulse-style")) {
+              const style = document.createElement("style");
+              style.id = "vc-pulse-style";
+              style.textContent = `@keyframes vcPulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(2.5); opacity: 0; } }`;
+              document.head.appendChild(style);
             }
           },
           () => {}, // silently fall back to default
@@ -353,14 +380,14 @@ function ExploreContent() {
     }
     setAddModalOpen(false);
     setEditRestaurant(null);
-    fetchRestaurants();
+    fetchRestaurants(filters.friendIds);
   };
 
   const handleDelete = async () => {
     if (editRestaurant) {
       await fetch(`/api/restaurants/${editRestaurant.id}`, { method: "DELETE" });
       setEditRestaurant(null);
-      fetchRestaurants();
+      fetchRestaurants(filters.friendIds);
     }
   };
 
@@ -497,6 +524,9 @@ function ExploreContent() {
                     <p className="text-[0.75rem] text-vc-brown-light">
                       {cuisineTag?.name ?? ""}
                       {r.costAvg ? ` · 人均 ¥${r.costAvg}` : ""}
+                      {(r as Restaurant & { ownerNickname?: string; isOwn?: boolean }).ownerNickname && !(r as Restaurant & { isOwn?: boolean }).isOwn
+                        ? ` · 来自 ${(r as Restaurant & { ownerNickname?: string }).ownerNickname}`
+                        : ""}
                     </p>
                     {r.signatureDishes.length > 0 && (
                       <div className="flex gap-1.5 mt-1.5 flex-wrap">

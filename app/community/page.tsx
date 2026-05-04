@@ -205,7 +205,15 @@ export default function CommunityPage() {
                       收藏
                     </button>
                     <button
-                      onClick={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const url = `${window.location.origin}/recipes/${post.recipeId}`;
+                        if (navigator.share) {
+                          navigator.share({ title: post.recipe?.title, text: post.caption, url }).catch(() => {});
+                        } else {
+                          navigator.clipboard.writeText(url).then(() => alert("链接已复制")).catch(() => {});
+                        }
+                      }}
                       className="ml-auto flex items-center gap-1.5 text-[0.82rem] text-vc-brown-light active:scale-95 transition-transform"
                     >
                       <Share2 size={18} />

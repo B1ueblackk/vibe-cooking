@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Settings, ChevronRight, BookOpen, Heart, MapPin, Award, LogOut } from "lucide-react";
+import { Settings, BookOpen, Heart, MapPin, Award, LogOut, Users, BarChart3, Star } from "lucide-react";
 import TasteProfile from "@/components/profile/TasteProfile";
 import BodyProfileCard from "@/components/profile/BodyProfileCard";
 
@@ -18,11 +18,19 @@ function daysSince(dateStr: string): number {
 export default function ProfilePage() {
   const router = useRouter();
   const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [pendingRequests, setPendingRequests] = useState(0);
 
   useEffect(() => {
     fetch("/api/profile")
       .then((res) => res.json())
       .then((data) => setProfile(data))
+      .catch(() => {});
+
+    fetch("/api/friends/requests")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setPendingRequests(data.length);
+      })
       .catch(() => {});
   }, []);
 
@@ -44,12 +52,13 @@ export default function ProfilePage() {
     { icon: Award, label: levelName, value: `Lv.${level}`, color: "bg-vc-amber/15 text-vc-amber-warm" },
   ];
 
-  const menuItems = [
-    { label: "我的菜谱", desc: `${recipeCount} 个原创菜谱`, icon: "📝", href: "/profile/recipes" },
-    { label: "AI 生成记录", desc: "查看 AI 生成的食谱历史", icon: "🤖", href: "/profile/ai-history" },
-    { label: "收藏菜谱", desc: `${favoriteCount} 个收藏`, icon: "⭐", href: "/profile/favorites" },
-    { label: "美食足迹", desc: `${restaurantCount} 家餐厅`, icon: "🗺️", href: "/explore" },
-    { label: "饮食报告", desc: "本周营养摄入分析", icon: "📊", href: "/mealplan/report" },
+  // Icon grid items
+  const gridItems = [
+    { icon: BookOpen, label: "我的菜谱", href: "/profile/recipes", color: "text-vc-terracotta", bg: "bg-vc-terracotta/10" },
+    { icon: Star, label: "收藏菜谱", href: "/profile/favorites", color: "text-vc-amber-warm", bg: "bg-vc-amber/15" },
+    { icon: BarChart3, label: "饮食报告", href: "/mealplan/report", color: "text-vc-forest", bg: "bg-vc-forest/10" },
+    { icon: Users, label: "好友", href: "/friends", color: "text-blue-500", bg: "bg-blue-50", badge: pendingRequests },
+    { icon: Settings, label: "设置", href: "/profile/settings", color: "text-vc-brown-medium", bg: "bg-vc-cream-deep" },
   ];
 
   const nickname = profile?.user.nickname ?? "美食探索家";
@@ -93,6 +102,29 @@ export default function ProfilePage() {
         ))}
       </div>
 
+      {/* Icon grid (like Douyin/Xiaohongshu) */}
+      <div className="mx-5 mb-6 bg-white rounded-3xl shadow-[var(--shadow-vc-sm)] p-5">
+        <div className="grid grid-cols-5 gap-3">
+          {gridItems.map(({ icon: Icon, label, href, color, bg, badge }) => (
+            <button
+              key={label}
+              onClick={() => router.push(href)}
+              className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform relative"
+            >
+              <div className={`w-11 h-11 rounded-xl ${bg} flex items-center justify-center relative`}>
+                <Icon size={20} className={color} />
+                {badge ? (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[0.6rem] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                    {badge}
+                  </span>
+                ) : null}
+              </div>
+              <span className="text-[0.68rem] text-vc-brown-medium">{label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Body profile card */}
       <div className="mb-6">
         <BodyProfileCard />
@@ -101,26 +133,6 @@ export default function ProfilePage() {
       {/* Taste profile */}
       <div className="mb-6">
         <TasteProfile />
-      </div>
-
-      {/* Menu list */}
-      <div className="mx-5 bg-white rounded-3xl shadow-[var(--shadow-vc-md)] overflow-hidden">
-        {menuItems.map((item, i) => (
-          <button
-            key={item.label}
-            onClick={() => router.push(item.href)}
-            className={`w-full flex items-center gap-3.5 px-5 py-4 active:bg-vc-cream-deep/50 transition-colors ${
-              i > 0 ? "border-t border-vc-cream-deep" : ""
-            }`}
-          >
-            <span className="text-xl">{item.icon}</span>
-            <div className="flex-1 text-left">
-              <div className="text-[0.88rem] font-medium text-vc-brown-dark">{item.label}</div>
-              <div className="text-[0.72rem] text-vc-brown-light">{item.desc}</div>
-            </div>
-            <ChevronRight size={16} className="text-vc-brown-light/40" />
-          </button>
-        ))}
       </div>
 
       {/* Logout */}

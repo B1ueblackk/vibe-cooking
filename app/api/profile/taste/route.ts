@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { tasteProfiles } from "@/lib/db/schema";
+import { tasteProfiles, users } from "@/lib/db/schema";
 import { getAuthUser } from "@/lib/auth";
 
 export async function GET() {
@@ -13,7 +13,11 @@ export async function GET() {
     .from(tasteProfiles)
     .where(eq(tasteProfiles.userId, userId));
 
-  return NextResponse.json(profile ?? null);
+  // Check if taste data is dirty
+  const [user] = await db.select({ tasteDirty: users.tasteDirty }).from(users).where(eq(users.id, userId));
+  const isDirty = (user?.tasteDirty ?? 1) === 1;
+
+  return NextResponse.json(profile ? { ...profile, isDirty } : { isDirty });
 }
 
 export async function PUT(request: NextRequest) {

@@ -56,6 +56,8 @@ export async function chat(
   options?: ChatOptions,
 ): Promise<string> {
   const cfg = getProvider(options?.provider);
+  const startTime = Date.now();
+  console.log(`[AI] Request → ${cfg.model} | provider=${options?.provider ?? "deepseek"} | messages=${messages.length}`);
 
   const res = await fetch(`${cfg.baseUrl}/v1/chat/completions`, {
     method: "POST",
@@ -67,20 +69,26 @@ export async function chat(
       model: cfg.model,
       messages,
       temperature: options?.temperature ?? 0.7,
-      max_tokens: options?.maxTokens ?? 8192,
+      max_tokens: options?.maxTokens ?? 16384,
       response_format: { type: "json_object" },
     }),
   });
 
+  const elapsed = Date.now() - startTime;
+
   if (!res.ok) {
     const err = await res.text();
+    console.error(`[AI] Error ← ${cfg.model} | ${res.status} | ${elapsed}ms | ${err.slice(0, 200)}`);
     throw new Error(`AI API error (${cfg.model}) ${res.status}: ${err}`);
   }
 
   const data: ChatCompletionResponse = await res.json();
   const msg = data.choices[0].message;
-  // DeepSeek reasoning models put output in reasoning_content, content may be empty
-  return msg.content || msg.reasoning_content || "";
+  const content = msg.content || "";
+  const reasoning = msg.reasoning_content || "";
+  console.log(`[AI] Response ← ${cfg.model} | ${elapsed}ms | content=${content.length} chars | reasoning=${reasoning.length} chars`);
+  // Prefer content (the actual output); fall back to reasoning_content for reasoning-only models
+  return content || reasoning;
 }
 
 export async function chatJSON<T>(
@@ -100,6 +108,8 @@ export async function chatJSON<T>(
         // fall through
       }
     }
+    console.error(`[AI] JSON parse failed. First 500 chars: ${content.slice(0, 500)}`);
+    console.error(`[AI] Last 500 chars: ${content.slice(-500)}`);
     throw new Error(`AI 返回格式错误，无法解析 JSON。响应长度: ${content.length} 字符`);
   }
 }

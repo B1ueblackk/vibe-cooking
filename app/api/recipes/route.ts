@@ -1,26 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, like, or } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { recipes, tags, recipeTags } from "@/lib/db/schema";
+import { recipes, tags, recipeTags, users } from "@/lib/db/schema";
 import { getAuthUser } from "@/lib/auth";
 
 // GET /api/recipes — list user's saved recipes
 // ?ai=1 to filter AI-generated only
+// ?q=keyword to search all recipes by title/description
 export async function GET(req: NextRequest) {
   const userId = await getAuthUser();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const aiOnly = req.nextUrl.searchParams.get("ai") === "1";
+  const query = req.nextUrl.searchParams.get("q")?.trim();
 
-  const conditions = aiOnly
-    ? and(eq(recipes.authorId, userId), eq(recipes.isAiGenerated, true))
-    : eq(recipes.authorId, userId);
+  let conditions;
+  if (query) {
+    // Search across all recipes (community discovery)
+    const pattern = `%${query}%`;
+    conditions = and(
+      eq(recipes.status, "done"),
+      or(like(recipes.title, pattern), like(recipes.description, pattern)),
+    );
+  } else if (aiOnly) {
+    conditions = and(eq(recipes.authorId, userId), eq(recipes.isAiGenerated, true));
+  } else {
+    conditions = eq(recipes.authorId, userId);
+  }
 
   const rows = await db
     .select()
     .from(recipes)
     .where(conditions)
-    .orderBy(desc(recipes.createdAt));
+    .orderBy(desc(recipes.createdAt))
+    .limit(query ? 30 : 200);
 
   return NextResponse.json(rows);
 }
@@ -79,6 +92,9 @@ export async function POST(request: Request) {
       console.error("[Tags] save failed:", e),
     );
   }
+
+  // Mark taste as dirty
+  await db.update(users).set({ tasteDirty: 1 }).where(eq(users.id, userId));
 
   return NextResponse.json(result[0], { status: 201 });
 }

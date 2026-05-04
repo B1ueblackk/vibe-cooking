@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq, and } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { favorites } from "@/lib/db/schema";
+import { favorites, users } from "@/lib/db/schema";
 import { getAuthUser } from "@/lib/auth";
 
 export async function POST(
@@ -26,6 +26,9 @@ export async function POST(
   } else {
     await db.insert(favorites).values({ userId, recipeId });
   }
+
+  // Mark taste as dirty
+  await db.update(users).set({ tasteDirty: 1 }).where(eq(users.id, userId));
 
   return NextResponse.json({ saved: !existing });
 }

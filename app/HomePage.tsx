@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarSync, Check, Loader2 } from "lucide-react";
+import { CalendarSync, Check, Loader2, Search } from "lucide-react";
 import SectionHeader from "@/components/SectionHeader";
 import HeroInput from "@/components/recipe/IngredientInput";
 import NutritionPanel from "@/components/recipe/NutritionPanel";
@@ -35,6 +35,7 @@ export default function HomePage() {
   const [level, setLevel] = useState(1);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [nickname, setNickname] = useState("");
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     fetch("/api/profile")
@@ -50,11 +51,59 @@ export default function HomePage() {
         }
       })
       .catch(() => {});
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
+
+  const startRecipePolling = useCallback((recipeId: string) => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    setLoading(true);
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/recipes/${recipeId}`);
+        const data = await res.json();
+        if (data.status === "done") {
+          clearInterval(pollRef.current!);
+          pollRef.current = null;
+          setRecipe({
+            title: data.title,
+            description: data.description,
+            ingredients: data.ingredients || [],
+            steps: data.steps || [],
+            calories: data.calories,
+            protein: data.protein,
+            fat: data.fat,
+            carbs: data.carbs,
+            cookTime: data.cookTime,
+            difficulty: data.difficulty,
+          });
+          setSaved(true);
+          setSavedRecipeId(data.id);
+          setLoading(false);
+          setShowReplace(false);
+          setReplaceSuccess(null);
+        } else if (data.status === "fallback") {
+          clearInterval(pollRef.current!);
+          pollRef.current = null;
+          setError(data.description || "无法识别食材，请输入有效的食材");
+          setLoading(false);
+        } else if (data.status === "failed") {
+          clearInterval(pollRef.current!);
+          pollRef.current = null;
+          setError("菜谱生成失败，请重试");
+          setLoading(false);
+        }
+      } catch {
+        // Network error, keep polling
+      }
+    }, 3000);
   }, []);
 
   const handleGenerate = async (inputIngredients: string[]) => {
     setLoading(true);
     setError(null);
+    setRecipe(null);
     setSaved(false);
     setSavedRecipeId(null);
     setIngredients(inputIngredients);
@@ -66,53 +115,11 @@ export default function HomePage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "生成失败");
-      setRecipe(data.recipe);
-      setShowReplace(false);
-      setReplaceSuccess(null);
-      // Auto-save to history
-      fetch("/api/recipes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data.recipe,
-          isAiGenerated: true,
-          sourceIngredients: inputIngredients,
-        }),
-      })
-        .then((r) => r.ok ? r.json() : null)
-        .then((saved) => {
-          if (saved?.id) {
-            setSaved(true);
-            setSavedRecipeId(saved.id);
-          }
-        })
-        .catch(() => {});
+      // API returns { id, status: "generating" }, start polling
+      startRecipePolling(data.id);
     } catch (e) {
       setError(e instanceof Error ? e.message : "生成失败，请重试");
-    } finally {
       setLoading(false);
-    }
-  };
-
-  const handleSaveRecipe = async () => {
-    if (!recipe) return;
-    try {
-      const res = await fetch("/api/recipes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...recipe,
-          isAiGenerated: true,
-          sourceIngredients: ingredients,
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setSaved(true);
-        setSavedRecipeId(data.id);
-      }
-    } catch (e) {
-      console.error("Save failed:", e);
     }
   };
 
@@ -163,6 +170,13 @@ export default function HomePage() {
               Your culinary journey
             </p>
           </div>
+        <div className="flex items-center gap-2.5">
+          <div
+            onClick={() => router.push("/search")}
+            className="w-11 h-11 rounded-full bg-white shadow-[var(--shadow-vc-sm)] flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
+          >
+            <Search size={18} className="text-vc-brown-medium" />
+          </div>
           <div
             onClick={() => router.push("/profile")}
             className="w-11 h-11 rounded-full bg-gradient-to-br from-vc-terracotta to-vc-amber-warm flex items-center justify-center text-lg text-white shadow-[var(--shadow-vc-md)] cursor-pointer active:scale-95 transition-transform overflow-hidden"
@@ -173,6 +187,7 @@ export default function HomePage() {
               nickname[0] || "?"
             )}
           </div>
+        </div>
         </div>
         <p className="font-serif text-[1.65rem] text-vc-brown-dark leading-tight">今天想吃点什么？</p>
         <p className="text-[0.95rem] text-vc-brown-light mt-1">让 AI 帮你发现美味灵感</p>

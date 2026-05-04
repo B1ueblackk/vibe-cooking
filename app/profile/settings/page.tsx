@@ -3,7 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Camera, Loader2, Check } from "lucide-react";
-import AvatarCropper from "@/components/profile/AvatarCropper";
+import dynamic from "next/dynamic";
+
+const AvatarCropper = dynamic(() => import("@/components/profile/AvatarCropper"), { ssr: false });
 
 interface TagCatalog {
   cuisine: string[];

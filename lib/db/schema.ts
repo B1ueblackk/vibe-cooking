@@ -10,6 +10,7 @@ export const users = sqliteTable("users", {
   phone: text("phone").unique().notNull(),
   nickname: text("nickname").notNull(),
   avatarUrl: text("avatar_url"),
+  tasteDirty: integer("taste_dirty").notNull().default(0),
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 
@@ -59,6 +60,7 @@ export const recipes = sqliteTable("recipes", {
   coverImage: text("cover_image"),
   isAiGenerated: integer("is_ai_generated", { mode: "boolean" }).notNull().default(false),
   sourceIngredients: text("source_ingredients", { mode: "json" }).$type<string[]>(),
+  status: text("status").notNull().default("done"), // 'generating' | 'done' | 'failed'
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 
@@ -106,6 +108,8 @@ export const mealPlans = sqliteTable("meal_plans", {
   plan: text("plan", { mode: "json" }).$type<WeekPlan>().notNull(),
   targetCalories: integer("target_calories").notNull().default(2000),
   cheatDays: text("cheat_days", { mode: "json" }).$type<number[]>().default([]),
+  shoppingList: text("shopping_list", { mode: "json" }).$type<import("@/lib/types").ShoppingItem[]>().default([]),
+  status: text("status").notNull().default("done"), // 'generating' | 'done' | 'failed'
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 
@@ -176,3 +180,43 @@ export const userPreferredTags = sqliteTable("user_preferred_tags", {
 }, (t) => [
   primaryKey({ columns: [t.userId, t.tagName] }),
 ]);
+
+// ==================
+// Friendships
+// ==================
+
+export const friendships = sqliteTable("friendships", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull().references(() => users.id),      // sender
+  friendId: text("friend_id").notNull().references(() => users.id),  // receiver
+  status: text("status").notNull().default("pending"), // 'pending' | 'accepted' | 'rejected'
+  starred: integer("starred").notNull().default(0),    // 1 = starred friend
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+// ==================
+// Comments
+// ==================
+
+export const comments = sqliteTable("comments", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull().references(() => users.id),
+  targetType: text("target_type").notNull(), // 'post' | 'recipe'
+  targetId: text("target_id").notNull(),
+  content: text("content").notNull(),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+// ==================
+// Recommendations
+// ==================
+
+export const recommendations = sqliteTable("recommendations", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  senderId: text("sender_id").notNull().references(() => users.id),
+  receiverId: text("receiver_id").notNull().references(() => users.id),
+  recipeId: text("recipe_id").notNull().references(() => recipes.id),
+  message: text("message"),
+  readAt: text("read_at"),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});

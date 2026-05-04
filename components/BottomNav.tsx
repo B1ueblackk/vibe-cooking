@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 import {
   Home,
   Search,
@@ -27,6 +28,19 @@ function matchTab(pathname: string): string {
 export default function BottomNav() {
   const pathname = usePathname();
   const current = matchTab(pathname);
+  const [hasPendingRequests, setHasPendingRequests] = useState(false);
+
+  useEffect(() => {
+    // Check pending friend requests for badge
+    fetch("/api/friends/requests")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setHasPendingRequests(true);
+        }
+      })
+      .catch(() => {});
+  }, [pathname]); // Re-check when navigating
 
   // Hide on login page
   if (pathname === "/login") return null;
@@ -40,7 +54,7 @@ export default function BottomNav() {
             <Link
               key={key}
               href={href}
-              className="flex flex-col items-center gap-1 px-4 py-1.5 rounded-2xl transition-all active:scale-92"
+              className="relative flex flex-col items-center gap-1 px-4 py-1.5 rounded-2xl transition-all active:scale-92"
             >
               <Icon
                 size={22}
@@ -51,6 +65,10 @@ export default function BottomNav() {
                 }`}
                 fill={isActive ? "currentColor" : "none"}
               />
+              {/* Red dot for pending friend requests */}
+              {key === "profile" && hasPendingRequests && (
+                <span className="absolute top-0.5 right-2.5 w-2 h-2 rounded-full bg-red-500" />
+              )}
               <span
                 className={`text-[0.62rem] font-semibold tracking-wide ${
                   isActive ? "text-vc-terracotta" : "text-vc-brown-light"

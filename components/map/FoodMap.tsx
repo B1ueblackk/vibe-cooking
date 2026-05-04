@@ -77,11 +77,35 @@ export default function FoodMap() {
 
       mapInstance = map;
 
-      // Center on user location if no restaurants
-      if (restaurants.length === 0 && navigator.geolocation) {
+      // Show blue dot for current location
+      if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
-            map.setCenter(new AMap.LngLat(pos.coords.longitude, pos.coords.latitude));
+            const { longitude, latitude } = pos.coords;
+            // Center on user if no restaurants
+            if (restaurants.length === 0) {
+              map.setCenter(new AMap.LngLat(longitude, latitude));
+            }
+
+            const el = document.createElement("div");
+            el.innerHTML = `<div style="position:relative;width:14px;height:14px;">
+              <div style="position:absolute;inset:0;background:rgba(66,133,244,0.2);border-radius:50%;animation:vcPulse 2s ease-out infinite;"></div>
+              <div style="position:absolute;inset:2px;background:#4285F4;border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(66,133,244,0.4);"></div>
+            </div>`;
+            const locMarker = new AMap.Marker({
+              position: new AMap.LngLat(longitude, latitude),
+              content: el,
+              offset: new AMap.Pixel(-7, -7),
+              zIndex: 200,
+            });
+            map.add(locMarker);
+
+            if (!document.getElementById("vc-pulse-style")) {
+              const style = document.createElement("style");
+              style.id = "vc-pulse-style";
+              style.textContent = `@keyframes vcPulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(2.5); opacity: 0; } }`;
+              document.head.appendChild(style);
+            }
           },
           () => {},
           { timeout: 5000, enableHighAccuracy: false }

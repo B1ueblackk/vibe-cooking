@@ -43,6 +43,107 @@ const DAY_LABELS: Record<string, string> = {
 const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const MEAL_LABELS: Record<string, string> = { breakfast: "早餐", lunch: "午餐", dinner: "晚餐" };
 
+function CalorieTrendChart({ plan, target }: { plan: Record<string, DayPlan>; target: number }) {
+  const dailyCals = DAY_KEYS.map((k) => {
+    const d = plan[k];
+    return d ? (d.breakfast?.calories ?? 0) + (d.lunch?.calories ?? 0) + (d.dinner?.calories ?? 0) : 0;
+  });
+  const maxCal = Math.max(...dailyCals, target, 100);
+  const W = 280, H = 120, PX = 30, PY = 10;
+  const chartW = W - PX * 2, chartH = H - PY * 2;
+  const toX = (i: number) => PX + (i / 6) * chartW;
+  const toY = (v: number) => PY + chartH - (v / maxCal) * chartH;
+  const points = dailyCals.map((c, i) => `${toX(i)},${toY(c)}`).join(" ");
+  const targetY = toY(target);
+
+  return (
+    <div className="bg-white rounded-2xl p-4 shadow-[var(--shadow-vc-sm)]">
+      <p className="text-[0.75rem] font-semibold text-vc-brown-medium mb-2">每日热量趋势</p>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
+        {/* Target line */}
+        <line x1={PX} y1={targetY} x2={W - PX} y2={targetY} stroke="#D4654A" strokeWidth="1" strokeDasharray="4 3" opacity="0.5" />
+        <text x={W - PX + 2} y={targetY + 3} fontSize="7" fill="#D4654A" opacity="0.7">目标</text>
+        {/* Grid lines */}
+        {[0.25, 0.5, 0.75].map((r) => (
+          <line key={r} x1={PX} y1={PY + chartH * (1 - r)} x2={W - PX} y2={PY + chartH * (1 - r)} stroke="#e5e0db" strokeWidth="0.5" />
+        ))}
+        {/* Line */}
+        <polyline fill="none" stroke="#D4654A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" points={points} />
+        {/* Area fill */}
+        <polygon fill="url(#calGrad)" opacity="0.15" points={`${toX(0)},${toY(0)} ${points} ${toX(6)},${toY(0)}`} />
+        <defs>
+          <linearGradient id="calGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#D4654A" />
+            <stop offset="100%" stopColor="#D4654A" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {/* Dots + labels */}
+        {dailyCals.map((c, i) => (
+          <g key={i}>
+            <circle cx={toX(i)} cy={toY(c)} r="3" fill="#D4654A" />
+            <text x={toX(i)} y={H - 1} textAnchor="middle" fontSize="7" fill="#8B6F5E">
+              {DAY_LABELS[DAY_KEYS[i]]?.slice(1)}
+            </text>
+            {c > 0 && (
+              <text x={toX(i)} y={toY(c) - 6} textAnchor="middle" fontSize="6.5" fill="#5C3D2E" fontWeight="600">
+                {c}
+              </text>
+            )}
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+function MacroPieChart({ p, f, c }: { p: number; f: number; c: number }) {
+  const total = p + f + c || 1;
+  const pPct = p / total, fPct = f / total, cPct = c / total;
+  const R = 40, r = 28, cx = 50, cy = 50;
+  const describeArc = (startPct: number, endPct: number) => {
+    const s = startPct * 2 * Math.PI - Math.PI / 2;
+    const e = endPct * 2 * Math.PI - Math.PI / 2;
+    const largeArc = endPct - startPct > 0.5 ? 1 : 0;
+    return `M${cx + R * Math.cos(s)},${cy + R * Math.sin(s)} A${R},${R} 0 ${largeArc} 1 ${cx + R * Math.cos(e)},${cy + R * Math.sin(e)} L${cx + r * Math.cos(e)},${cy + r * Math.sin(e)} A${r},${r} 0 ${largeArc} 0 ${cx + r * Math.cos(s)},${cy + r * Math.sin(s)} Z`;
+  };
+  const segments = [
+    { pct: pPct, color: "#3B82F6", label: "蛋白质", grams: p },
+    { pct: fPct, color: "#F59E0B", label: "脂肪", grams: f },
+    { pct: cPct, color: "#22C55E", label: "碳水", grams: c },
+  ];
+  let acc = 0;
+
+  return (
+    <div className="bg-white rounded-2xl p-4 shadow-[var(--shadow-vc-sm)]">
+      <p className="text-[0.75rem] font-semibold text-vc-brown-medium mb-2">营养分布</p>
+      <div className="flex items-center gap-4">
+        <svg viewBox="0 0 100 100" className="w-24 h-24 shrink-0">
+          {segments.map((seg) => {
+            if (seg.pct <= 0) { return null; }
+            const start = acc;
+            acc += seg.pct;
+            return <path key={seg.label} d={describeArc(start, acc)} fill={seg.color} />;
+          })}
+          <text x={cx} y={cy - 2} textAnchor="middle" fontSize="9" fontWeight="700" fill="#5C3D2E">
+            {Math.round((p * 4 + f * 9 + c * 4))}
+          </text>
+          <text x={cx} y={cy + 8} textAnchor="middle" fontSize="6" fill="#8B6F5E">kcal</text>
+        </svg>
+        <div className="flex-1 space-y-2">
+          {segments.map((seg) => (
+            <div key={seg.label} className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
+              <span className="text-[0.72rem] text-vc-brown-medium flex-1">{seg.label}</span>
+              <span className="text-[0.72rem] font-semibold text-vc-brown-dark">{seg.grams}g</span>
+              <span className="text-[0.65rem] text-vc-brown-light w-9 text-right">{Math.round(seg.pct * 100)}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function weekLabel(weekStart: string): string {
   const d = new Date(weekStart);
   const end = new Date(d);
@@ -197,6 +298,12 @@ export default function DietReportPage() {
                         <div className="text-[0.68rem] text-vc-brown-light">碳水</div>
                         <div className="text-[0.85rem] font-bold text-green-600">{totals.c}g</div>
                       </div>
+                    </div>
+
+                    {/* Charts */}
+                    <div className="grid grid-cols-1 gap-3 mb-3">
+                      <CalorieTrendChart plan={plan.plan} target={plan.targetCalories} />
+                      <MacroPieChart p={totals.p} f={totals.f} c={totals.c} />
                     </div>
 
                     {/* Day-by-day meals */}

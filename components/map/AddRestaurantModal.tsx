@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { X, MapPin, Star, Plus, Search } from "lucide-react";
 import { CUISINE_COLORS } from "@/lib/constants";
 import type { Restaurant, RestaurantStatus } from "@/lib/types";
+import ImageUpload from "@/components/shared/ImageUpload";
 
 const CUISINE_OPTIONS = ["川菜", "粤菜", "湘菜", "日料", "韩餐", "意餐", "法餐", "东南亚", "西餐", "火锅", "烧烤", "甜品", "咖啡", "小吃"];
 const TASTE_OPTIONS = ["辣", "清淡", "甜", "咸鲜", "酸", "麻", "鲜香"];
@@ -31,6 +32,7 @@ interface Props {
     status: RestaurantStatus;
     cuisines: string[];
     tastes: string[];
+    coverImage?: string;
   }) => void;
   onClose: () => void;
   onDelete?: () => void;
@@ -46,6 +48,7 @@ export default function AddRestaurantModal({ restaurant, coordinates, onSave, on
   const [costAvg, setCostAvg] = useState<string>(restaurant?.costAvg?.toString() ?? "");
   const [rating, setRating] = useState(restaurant?.rating ?? 0);
   const [notes, setNotes] = useState(restaurant?.notes ?? "");
+  const [coverImage, setCoverImage] = useState(restaurant?.coverImage ?? "");
   const [status, setStatus] = useState<RestaurantStatus>(restaurant?.status ?? "visited");
   const [selectedCuisines, setSelectedCuisines] = useState<Set<string>>(new Set(cuisineTagNames));
   const [selectedTastes, setSelectedTastes] = useState<Set<string>>(new Set(tasteTagNames));
@@ -127,6 +130,7 @@ export default function AddRestaurantModal({ restaurant, coordinates, onSave, on
       status,
       cuisines: Array.from(selectedCuisines),
       tastes: Array.from(selectedTastes),
+      coverImage: coverImage || undefined,
     });
   };
 
@@ -338,6 +342,17 @@ export default function AddRestaurantModal({ restaurant, coordinates, onSave, on
               placeholder="随手记录..."
               rows={3}
               className="w-full bg-vc-cream-deep/60 rounded-xl px-4 py-3 text-sm outline-none resize-none focus:ring-2 focus:ring-vc-terracotta/30"
+            />
+          </div>
+
+          {/* Cover image */}
+          <div>
+            <label className="text-[0.78rem] font-semibold text-vc-brown-medium mb-1.5 block">餐厅照片</label>
+            <ImageUpload
+              value={coverImage || undefined}
+              onUpload={setCoverImage}
+              onRemove={() => setCoverImage("")}
+              placeholder="上传餐厅照片"
             />
           </div>
 
